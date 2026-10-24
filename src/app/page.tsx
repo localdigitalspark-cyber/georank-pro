@@ -75,6 +75,7 @@ import {
   RotateCw,
   AlertCircle,
   X,
+  CheckCircle2,
 } from 'lucide-react';
 
 // Pre-computed initial keyword scan cache for Austin Premier Plumbing
@@ -120,6 +121,7 @@ export default function DashboardPage() {
   // Live DataForSEO credentials detection
   const [hasDataForSeoCreds, setHasDataForSeoCreds] = useState<boolean>(false);
   const [liveNotice, setLiveNotice] = useState<string | null>(null);
+  const [globalToast, setGlobalToast] = useState<string | null>(null);
 
   // Scan Execution State - seeded from initial keyword cache entry
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -939,19 +941,94 @@ export default function DashboardPage() {
       });
   };
 
-  // Handle active business deletion from BusinessHeader
+  // Handle active business deletion from BusinessHeader or Actions menu
   const handleDeleteActiveBusiness = async () => {
-    if (!activeBusinessId) return;
+    const targetId = activeBusinessId;
+    const deletedName = businessName;
     try {
-      const res = await fetch(`/api/businesses/${activeBusinessId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('georank_active_biz_id');
+      if (targetId) {
+        await fetch(`/api/businesses/${targetId}`, {
+          method: 'DELETE',
+        }).catch((e) => console.warn('Delete business fetch error:', e));
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('georank_active_biz_id');
+      }
+
+      setGlobalToast(`"${deletedName}" and all associated scans were deleted successfully.`);
+      setTimeout(() => setGlobalToast(null), 6000);
+
+      // Check remaining businesses
+      const bizRes = await fetch('/api/businesses').catch(() => null);
+      const bizData = bizRes && bizRes.ok ? await bizRes.json() : null;
+      const remaining =
+        bizData?.success && Array.isArray(bizData.businesses)
+          ? bizData.businesses.filter((b: any) => b.id !== targetId)
+          : [];
+
+      if (remaining.length > 0) {
+        const next = remaining[0];
+        setActiveBusinessId(next.id);
+        setBusinessName(next.name);
+        setBusinessAddress(next.address);
+        setCategory(next.category);
+        setKeyword(next.keyword || next.category);
+        setSelectedKeyword(next.keyword || next.category);
+        setCenterLat(next.lat);
+        setCenterLng(next.lng);
+        if (next.placeId) setTargetPlaceId(next.placeId);
+        if (next.website) {
+          setTargetDomain(next.website);
+          setTargetWebsite(next.website);
         }
-        setBusinessWorkspaceOpen(false);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('georank_active_biz_id', next.id);
+        }
+
+        // Rebuild initial keyword cache for the next business
+        const freshCache = buildInitialKeywordScanCache({
+          businessName: next.name,
+          center: { lat: next.lat, lng: next.lng },
+          gridSize,
+          distanceStep,
+          unit,
+          mode: scanMode,
+        });
+        setKeywordCache(freshCache);
+
+        // Fetch scan for the next business
+        fetch(`/api/scans?businessId=${encodeURIComponent(next.id)}`)
+          .then((r) => r.json())
+          .then((scanData) => {
+            if (scanData.success && scanData.scan?.scanSummary) {
+              setScanSummary(scanData.scan.scanSummary);
+              setSelectedNode(
+                scanData.scan.scanSummary.nodes.find((n: any) => n.isCenter) ||
+                  scanData.scan.scanSummary.nodes[0] ||
+                  null
+              );
+              if (scanData.scan.audit) {
+                setAuditOutput(scanData.scan.audit);
+              }
+            } else {
+              const defaultEntry =
+                freshCache[next.keyword || next.category] || Object.values(freshCache)[0];
+              if (defaultEntry) {
+                setScanSummary(defaultEntry.summary);
+                setSelectedNode(
+                  defaultEntry.summary.nodes.find((n: any) => n.isCenter) ||
+                    defaultEntry.summary.nodes[0]
+                );
+                setAuditOutput(defaultEntry.audit);
+              }
+            }
+          })
+          .catch(() => {});
+      } else {
         setActiveBusinessId('');
+        setBusinessWorkspaceOpen(false);
+        setScanSummary(null);
+        setSelectedNode(null);
       }
     } catch (err) {
       console.error('Failed to delete active business:', err);
@@ -1056,6 +1133,26 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Global Toast Notification */}
+        {globalToast && (
+          <div
+            data-testid="global-toast-notification"
+            className="mx-4 sm:mx-6 mt-3 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1"
+          >
+            <div className="flex items-center space-x-2 font-medium">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{globalToast}</span>
+            </div>
+            <button
+              onClick={() => setGlobalToast(null)}
+              className="text-emerald-700 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+              aria-label="Dismiss toast"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Main Body Workspace Container: View Switcher */}
         <main className="flex-1 p-4 sm:p-6 space-y-4">
           {/* VIEW: Businesses (Workspace OR Directory Cards) */}
@@ -1072,6 +1169,7 @@ export default function DashboardPage() {
                     onOpenNewScan={() => setIsNewScanOpen(true)}
                     onOpenShareReport={handleOpenShareReport}
                     onOpenActionPlan={() => setIsActionPlanOpen(true)}
+                    onDeleteBusiness={handleDeleteActiveBusiness}
                     businessName={businessName}
                     category={category}
                     city={businessAddress}
@@ -1178,7 +1276,9 @@ export default function DashboardPage() {
                 onOpenAddBusinessModal={() => setIsWizardOpen(true)}
                 currentBusinessName={businessName}
                 onLocationResolved={handleLocationResolved}
-                onBusinessDeleted={(deletedId) => {
+                onBusinessDeleted={(deletedId, name) => {
+                  setGlobalToast(`"${name}" and all associated scans were deleted successfully.`);
+                  setTimeout(() => setGlobalToast(null), 5000);
                   if (activeBusinessId === deletedId) {
                     if (typeof window !== 'undefined') {
                       localStorage.removeItem('georank_active_biz_id');
@@ -1238,6 +1338,10 @@ export default function DashboardPage() {
           {/* VIEW: Find Businesses (Lead Prospecting Finder) */}
           {activeNav === 'find-businesses' && (
             <FindBusinessesView
+              onDismissProspect={(_id, name) => {
+                setGlobalToast(`Dismissed "${name}" from discovery targets.`);
+                setTimeout(() => setGlobalToast(null), 5000);
+              }}
               onScanProspect={(target) => {
                 setBusinessName(target.name);
                 setKeyword(target.keyword);

@@ -38,6 +38,7 @@ import {
   Info,
   Tag,
   FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import type { GridScanSummary, NodeScanOutput } from '../../lib/serp/adapter.ts';
 import { KeywordDiscoveryModal } from '../keywords/KeywordDiscoveryModal.tsx';
@@ -57,6 +58,7 @@ export interface ProfitMapsViewProps {
   onOpenNewScan?: () => void;
   onOpenShareReport?: () => void;
   onOpenActionPlan?: () => void;
+  onDeleteBusiness?: () => void;
   businessName: string;
   category?: string;
   city?: string;
@@ -140,6 +142,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
   onOpenNewScan,
   onOpenShareReport,
   onOpenActionPlan,
+  onDeleteBusiness,
   businessName,
   category = 'Local Services',
   city = 'Local Area',
@@ -153,6 +156,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
   // Top Keyword Selector Bar State
   const activeKeyword = propActiveKeyword || scanSummary?.keyword || 'Emergency Plumber';
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Floating Details Card State
   const [floatingTab, setFloatingTab] = useState<'details' | 'export'>('details');
@@ -544,6 +548,24 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                     <Share2 className="w-3.5 h-3.5 text-slate-500" />
                     <span>Share client report link</span>
                   </button>
+                )}
+
+                {onDeleteBusiness && (
+                  <>
+                    <div className="my-1 border-t border-slate-100" />
+                    <button
+                      type="button"
+                      data-testid="actions-delete-business-btn"
+                      onClick={() => {
+                        setShowActionsDropdown(false);
+                        setShowDeleteModal(true);
+                      }}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-rose-600 hover:bg-rose-50 text-left transition font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Delete Business</span>
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -1017,6 +1039,48 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
           }
         }}
       />
+
+      {/* Delete Business Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Delete &quot;{businessName}&quot;?
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Are you sure you want to delete this business? All associated geo-grid rankings, keyword telemetry, and saved client reports will be permanently purged.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="confirm-delete-business-btn"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  if (onDeleteBusiness) onDeleteBusiness();
+                }}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-rose-600/20 transition cursor-pointer"
+              >
+                Yes, Delete Business
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

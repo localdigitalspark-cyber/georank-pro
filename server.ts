@@ -795,6 +795,11 @@ app.get(['/api/scans/:scanId', '/api/scans'], (req: Request, res: Response) => {
         audit: bizScans[0].audit,
       });
     }
+    return res.status(404).json({
+      success: false,
+      scans: [],
+      error: `No scans found for business ${businessId}`,
+    });
   }
 
   const rawId =
