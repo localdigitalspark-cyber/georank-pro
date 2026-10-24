@@ -305,6 +305,69 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  // Restore active business & scans from persistence across page refreshes
+  useEffect(() => {
+    let isMounted = true;
+    const savedBizId =
+      typeof window !== 'undefined' ? localStorage.getItem('georank_active_biz_id') : null;
+
+    fetch('/api/businesses')
+      .then((r) => r.json())
+      .then((data) => {
+        if (
+          !isMounted ||
+          !data.success ||
+          !Array.isArray(data.businesses) ||
+          data.businesses.length === 0
+        )
+          return;
+
+        const targetBiz = savedBizId
+          ? data.businesses.find((b: any) => b.id === savedBizId) || data.businesses[0]
+          : data.businesses[0];
+
+        if (targetBiz) {
+          setActiveBusinessId(targetBiz.id);
+          setBusinessName(targetBiz.name);
+          setBusinessAddress(targetBiz.address);
+          setCategory(targetBiz.category);
+          setKeyword(targetBiz.keyword || targetBiz.category);
+          setSelectedKeyword(targetBiz.keyword || targetBiz.category);
+          setCenterLat(targetBiz.lat);
+          setCenterLng(targetBiz.lng);
+          if (targetBiz.placeId) setTargetPlaceId(targetBiz.placeId);
+          if (targetBiz.website) {
+            setTargetDomain(targetBiz.website);
+            setTargetWebsite(targetBiz.website);
+          }
+
+          // Check if there is an existing persisted scan for this business
+          fetch(`/api/scans?businessId=${encodeURIComponent(targetBiz.id)}`)
+            .then((r) => r.json())
+            .then((scanData) => {
+              if (isMounted && scanData.success && scanData.scan?.scanSummary) {
+                const s = scanData.scan;
+                setScanSummary(s.scanSummary);
+                setSelectedNode(
+                  s.scanSummary.nodes.find((n: any) => n.isCenter) || s.scanSummary.nodes[0] || null
+                );
+                if (s.audit) {
+                  setAuditOutput(s.audit);
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not restore persisted business:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleToggleScanMode = (newMode: SerpScanMode) => {
     setScanMode(newMode);
     if (newMode === 'live' && !hasDataForSeoCreds) {
@@ -395,6 +458,7 @@ export default function DashboardPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             scanId: scanSummary.scanId,
+            businessId: businessId || activeBusinessId,
             scanSummary,
             audit: auditOutput,
             businessName,
@@ -414,6 +478,8 @@ export default function DashboardPage() {
       activeScanId ||
       (businessId
         ? `business-${businessId}`
+        : activeBusinessId
+        ? `business-${activeBusinessId}`
         : businessName
         ? `business-${businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
         : 'latest');
@@ -432,6 +498,7 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scanId: scanSummary.scanId,
+          businessId: activeBusinessId,
           scanSummary,
           audit: auditOutput,
           businessName,
@@ -511,6 +578,7 @@ export default function DashboardPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            businessId: activeBusinessId,
             businessName: curBusinessName,
             placeId: curPlaceId,
             domainOrUrl: curDomain,
@@ -575,6 +643,24 @@ export default function DashboardPage() {
 
         // Run AI audit
         runAudit(summary);
+
+        // Persist live scan to server
+        fetch('/api/scans/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scanId: summary.scanId,
+            businessId: activeBusinessId,
+            scanSummary: summary,
+            audit: auditOutput,
+            businessName: curBusinessName,
+            keyword: curKeyword,
+            center: { lat: curLat, lng: curLng },
+            gridSize: curGridSize || 5,
+            distanceStep: curDistanceStep || 1.0,
+            unit: curUnit || 'km',
+          }),
+        }).catch(() => {});
 
         setScanProgress(100);
         setScanStepText('Scan complete');
@@ -706,6 +792,24 @@ export default function DashboardPage() {
       }));
       setSelectedKeyword(curKeyword);
 
+      // Persist scan to server
+      fetch('/api/scans/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scanId: summary.scanId,
+          businessId: activeBusinessId,
+          scanSummary: summary,
+          audit: immediateAudit,
+          businessName: curBusinessName,
+          keyword: curKeyword,
+          center,
+          gridSize: curGridSize,
+          distanceStep: curDistanceStep,
+          unit: curUnit,
+        }),
+      }).catch(() => {});
+
       setScanProgress(100);
       setScanStepText('Scan complete!');
       setIsScanning(false);
@@ -774,6 +878,9 @@ export default function DashboardPage() {
   // Switch to selected business card from Directory
   const handleSelectBusinessCard = (item: BusinessCardItem) => {
     setActiveBusinessId(item.id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('georank_active_biz_id', item.id);
+    }
     setBusinessName(item.name);
     setBusinessAddress(item.address);
     setCategory(item.category);
@@ -795,14 +902,40 @@ export default function DashboardPage() {
     });
     setKeywordCache(freshCache);
 
-    const activeEntry = freshCache[item.keyword] || Object.values(freshCache)[0];
-    if (activeEntry) {
-      setScanSummary(activeEntry.summary);
-      setSelectedNode(
-        activeEntry.summary.nodes.find((n) => n.isCenter) || activeEntry.summary.nodes[0] || null
-      );
-      setAuditOutput(activeEntry.audit);
-    }
+    // Try loading existing saved scan for this business
+    fetch(`/api/scans?businessId=${encodeURIComponent(item.id)}`)
+      .then((r) => r.json())
+      .then((scanData) => {
+        if (scanData.success && scanData.scan?.scanSummary) {
+          const s = scanData.scan;
+          setScanSummary(s.scanSummary);
+          setSelectedNode(
+            s.scanSummary.nodes.find((n: any) => n.isCenter) || s.scanSummary.nodes[0] || null
+          );
+          if (s.audit) {
+            setAuditOutput(s.audit);
+          }
+        } else {
+          const activeEntry = freshCache[item.keyword] || Object.values(freshCache)[0];
+          if (activeEntry) {
+            setScanSummary(activeEntry.summary);
+            setSelectedNode(
+              activeEntry.summary.nodes.find((n) => n.isCenter) || activeEntry.summary.nodes[0] || null
+            );
+            setAuditOutput(activeEntry.audit);
+          }
+        }
+      })
+      .catch(() => {
+        const activeEntry = freshCache[item.keyword] || Object.values(freshCache)[0];
+        if (activeEntry) {
+          setScanSummary(activeEntry.summary);
+          setSelectedNode(
+            activeEntry.summary.nodes.find((n) => n.isCenter) || activeEntry.summary.nodes[0] || null
+          );
+          setAuditOutput(activeEntry.audit);
+        }
+      });
   };
 
   // Handle active business deletion from BusinessHeader
@@ -813,6 +946,9 @@ export default function DashboardPage() {
         method: 'DELETE',
       });
       if (res.ok) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('georank_active_biz_id');
+        }
         setBusinessWorkspaceOpen(false);
         setActiveBusinessId('');
       }
@@ -1042,6 +1178,9 @@ export default function DashboardPage() {
                 onLocationResolved={handleLocationResolved}
                 onBusinessDeleted={(deletedId) => {
                   if (activeBusinessId === deletedId) {
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('georank_active_biz_id');
+                    }
                     setActiveBusinessId('');
                   }
                 }}
@@ -1252,8 +1391,12 @@ export default function DashboardPage() {
                 }),
               });
               const saved = await res.json();
-              if (saved?.business?.id) {
-                setActiveBusinessId(saved.business.id);
+              const newBizId = saved?.business?.id || saved?.id;
+              if (newBizId) {
+                setActiveBusinessId(newBizId);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('georank_active_biz_id', newBizId);
+                }
               }
             } catch (e) {
               console.warn('Could not persist new business via API:', e);

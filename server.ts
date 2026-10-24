@@ -19,7 +19,7 @@ import {
 import { generateGeoGrid } from './src/lib/geo/grid-generator.ts';
 import { buildInitialKeywordScanCache } from './src/lib/geo/keyword-scans.ts';
 import { scanGridNode, summarizeGridScan, isDataForSeoConfigured } from './src/lib/serp/adapter.ts';
-import { saveScan, getScan, listScans } from './src/lib/storage/scan-store.ts';
+import { saveScan, getScan, listScans, getScansForBusiness, deleteScansForBusiness } from './src/lib/storage/scan-store.ts';
 import {
   listBusinesses,
   getBusiness,
@@ -643,12 +643,36 @@ app.post('/api/businesses/import/gbp', async (req: Request, res: Response) => {
       lat: details.lat,
       lng: details.lng,
       placeId: details.placeId,
+      cid: details.cid,
       rating: details.rating,
       reviews: details.reviews,
+      reviewCount: details.reviewCount,
       suggestedKeywords: details.suggestedKeywords,
       source: 'gbp',
     });
-    res.status(201).json({ success: true, business: saved });
+
+    const normalized = {
+      id: saved.id,
+      name: saved.name,
+      address: saved.address,
+      lat: saved.lat,
+      lng: saved.lng,
+      phone: saved.phone || '',
+      website: saved.website || '',
+      category: saved.category,
+      rating: saved.rating,
+      reviewCount: saved.reviewCount || saved.reviews,
+      placeId: saved.placeId,
+    };
+
+    res.status(201).json({
+      success: true,
+      ...normalized,
+      business: {
+        ...saved,
+        ...normalized,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed importing from GBP' });
   }
@@ -677,7 +701,30 @@ app.post('/api/businesses/import/website', async (req: Request, res: Response) =
       notes: scraped.description ? `Extracted Meta: ${scraped.description}` : undefined,
       source: 'website',
     });
-    res.status(201).json({ success: true, business: saved, extracted: scraped });
+
+    const normalized = {
+      id: saved.id,
+      name: saved.name,
+      address: saved.address,
+      lat: saved.lat,
+      lng: saved.lng,
+      phone: saved.phone || '',
+      website: saved.website || '',
+      category: saved.category,
+      rating: saved.rating,
+      reviewCount: saved.reviewCount || saved.reviews,
+      placeId: saved.placeId,
+    };
+
+    res.status(201).json({
+      success: true,
+      ...normalized,
+      business: {
+        ...saved,
+        ...normalized,
+      },
+      extracted: scraped,
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed importing from website URL' });
   }
@@ -697,6 +744,7 @@ app.post('/api/scans/save', (req: Request, res: Response) => {
 
     const scanId = saveScan({
       scanId: body.scanId || scanSummary.scanId,
+      businessId: body.businessId || scanSummary.businessId || scanSummary.target?.businessId || undefined,
       businessName: businessName || scanSummary.target?.businessName || 'Target Business',
       keyword: keyword || scanSummary.keyword || 'Emergency Service',
       center: center || scanSummary.center || { lat: 30.2672, lng: -97.7431 },
@@ -729,7 +777,25 @@ app.post('/api/scans/save', (req: Request, res: Response) => {
  * so client reports NEVER fail with a 404.
  */
 app.get(['/api/scans/:scanId', '/api/scans'], (req: Request, res: Response) => {
-  const rawId = (req.params.scanId as string) || 'latest';
+  const businessId = (req.query.businessId as string) || (req.query.bizId as string);
+  if (businessId) {
+    const bizScans = getScansForBusiness(businessId);
+    if (bizScans.length > 0) {
+      return res.json({
+        success: true,
+        scan: bizScans[0],
+        scans: bizScans,
+        data: bizScans[0].scanSummary,
+        audit: bizScans[0].audit,
+      });
+    }
+  }
+
+  const rawId =
+    (req.params.scanId as string) ||
+    (req.query.scanId as string) ||
+    (req.query.id as string) ||
+    'latest';
   const scanId = rawId.trim();
 
   let scan = getScan(scanId);

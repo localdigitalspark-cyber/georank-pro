@@ -4,17 +4,23 @@
  *
  * Lightweight persistent JSON file cache and in-memory map
  * for public shareable client report links (/reports/[scanId]).
+ *
+ * Hardened for:
+ * - process.env.STORAGE_PATH and /opt/render/project/src/.data mounts
+ * - Atomic write operations (.tmp file rename) preventing JSON corruption
+ * - Immediate in-memory sync across reads/writes
+ * - Direct businessId referencing & cascade purges
  */
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import type { GridScanSummary } from '../serp/adapter.ts';
 import type { LocalSeoAuditOutput } from '../ai/audit-generator.ts';
 import type { DiscoveredKeyword } from '../keywords/keyword-discovery.ts';
 
 export interface StoredScanRecord {
   scanId: string;
+  businessId?: string;
   createdAt: string;
   businessName: string;
   keyword: string;
@@ -27,27 +33,42 @@ export interface StoredScanRecord {
   discoveredKeywords?: DiscoveredKeyword[];
 }
 
-// In-memory cache for ultra-fast lookup & ephemeral fallback
+// In-memory cache for ultra-fast lookup & immediate sync across refreshes
 const inMemoryScans = new Map<string, StoredScanRecord>();
 
 /**
  * Resolves the writable storage directory with robust fallbacks:
- * 1. Persistent disk on Render: /opt/render/project/src/.data (if mounted)
- * 2. Local workspace ./.data directory
- * 3. Returns null if disk is read-only or unavailable (gracefully running in in-memory mode)
+ * 1. process.env.STORAGE_PATH (if provided in environment)
+ * 2. Persistent disk on Render: /opt/render/project/src/.data (if mounted)
+ * 3. Local workspace .data directory
+ * 4. Gracefully falls back to pure in-memory cache if filesystem is restricted
  */
-function resolveStorageDir(): string | null {
-  const renderPersistentDir = '/opt/render/project/src/.data';
-  const localDataDir = path.resolve(process.cwd(), '.data');
+export function resolveStorageDir(): string | null {
+  // 1. Explicit env var override
+  if (process.env.STORAGE_PATH) {
+    try {
+      const customPath = path.resolve(process.env.STORAGE_PATH);
+      if (!fs.existsSync(customPath)) {
+        fs.mkdirSync(customPath, { recursive: true });
+      }
+      return customPath;
+    } catch (err) {
+      console.warn('Storage: custom STORAGE_PATH not accessible, trying fallbacks:', err);
+    }
+  }
 
+  // 2. Render persistent disk default mount
+  const renderPersistentDir = '/opt/render/project/src/.data';
   try {
     if (fs.existsSync(renderPersistentDir)) {
       return renderPersistentDir;
     }
   } catch {
-    // Persistent mount check ignored
+    // Ignore
   }
 
+  // 3. Local workspace .data directory
+  const localDataDir = path.resolve(process.cwd(), '.data');
   try {
     if (!fs.existsSync(localDataDir)) {
       fs.mkdirSync(localDataDir, { recursive: true });
@@ -59,7 +80,37 @@ function resolveStorageDir(): string | null {
   }
 }
 
-// Ensure data folder and file exist
+/**
+ * Atomic JSON write: writes to temporary file first, then atomically renames to target file.
+ * Prevents corrupted or truncated JSON reads when multiple scans write concurrently.
+ */
+export function atomicWriteJsonSync(filePath: string, data: any): void {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const tempFile = path.join(
+    dir,
+    `.${path.basename(filePath)}.tmp.${Date.now()}.${Math.random().toString(36).substring(2, 8)}`
+  );
+  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
+  try {
+    fs.renameSync(tempFile, filePath);
+  } catch (renameErr) {
+    // On Windows or across partitions, renameSync can fail; fallback to copy and delete
+    try {
+      fs.copyFileSync(tempFile, filePath);
+      fs.unlinkSync(tempFile);
+    } catch {
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+      try {
+        if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+      } catch {}
+    }
+  }
+}
+
+// Ensure data folder and file exist and load into memory cache
 function initStorage() {
   try {
     const dataDir = resolveStorageDir();
@@ -84,18 +135,15 @@ function initStorage() {
   }
 }
 
-// Persist in-memory scans to disk safely without throwing ENOENT
+// Persist in-memory scans to disk safely using atomic writes
 function persistToDisk() {
   try {
     const dataDir = resolveStorageDir();
     if (!dataDir) return;
 
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
     const scansFile = path.join(dataDir, 'scans.json');
     const allScans = Array.from(inMemoryScans.values());
-    fs.writeFileSync(scansFile, JSON.stringify(allScans, null, 2), 'utf-8');
+    atomicWriteJsonSync(scansFile, allScans);
   } catch (err) {
     console.warn('ScanStore: Ephemeral storage note - persisting scans to disk skipped (in-memory mode retained):', err);
   }
@@ -121,6 +169,7 @@ function generateScanId(): string {
  */
 export function saveScan(scanData: {
   scanId?: string;
+  businessId?: string;
   businessName: string;
   keyword: string;
   center: { lat: number; lng: number };
@@ -135,6 +184,7 @@ export function saveScan(scanData: {
 
   const record: StoredScanRecord = {
     scanId,
+    businessId: scanData.businessId,
     createdAt: new Date().toISOString(),
     businessName: scanData.businessName,
     keyword: scanData.keyword,
@@ -198,6 +248,21 @@ export function listScans(limit = 20): StoredScanRecord[] {
 }
 
 /**
+ * Retrieves all scans associated with a given businessId
+ */
+export function getScansForBusiness(businessId: string): StoredScanRecord[] {
+  if (!businessId) return [];
+  const targetIdLower = businessId.toLowerCase().trim();
+  return Array.from(inMemoryScans.values())
+    .filter(
+      (s) =>
+        s.businessId?.toLowerCase() === targetIdLower ||
+        s.scanId.toLowerCase().includes(targetIdLower)
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
  * Deletes a single scan by scanId
  */
 export function deleteScan(scanId: string): boolean {
@@ -216,9 +281,12 @@ export function deleteScansForBusiness(businessId: string, businessName?: string
   const targetNameLower = businessName?.toLowerCase().trim();
 
   for (const [id, scan] of Array.from(inMemoryScans.entries())) {
-    const matchesId = id.toLowerCase().includes(targetIdLower) ||
-      (scan as any).businessId?.toLowerCase() === targetIdLower;
-    const matchesName = targetNameLower && scan.businessName?.toLowerCase().trim() === targetNameLower;
+    const matchesId =
+      targetIdLower &&
+      (scan.businessId?.toLowerCase() === targetIdLower ||
+        id.toLowerCase().includes(targetIdLower));
+    const matchesName =
+      targetNameLower && scan.businessName?.toLowerCase().trim() === targetNameLower;
 
     if (matchesId || matchesName) {
       inMemoryScans.delete(id);
@@ -231,5 +299,3 @@ export function deleteScansForBusiness(businessId: string, businessName?: string
   }
   return deletedCount;
 }
-
-export { resolveStorageDir };

@@ -3,12 +3,13 @@
  * Path: /src/lib/storage/business-store.ts
  *
  * Implements persistent business record management with disk/in-memory fallback,
- * pre-seeded defaults, and clean cascade integration with scan-store.
+ * atomic JSON file persistence (.tmp rename), pre-seeded defaults,
+ * and clean cascade integration with scan-store.
  */
 
 import fs from 'fs';
 import path from 'path';
-import { resolveStorageDir, deleteScansForBusiness } from './scan-store.ts';
+import { resolveStorageDir, atomicWriteJsonSync, deleteScansForBusiness } from './scan-store.ts';
 
 export interface ManagedBusiness {
   id: string;
@@ -28,6 +29,7 @@ export interface ManagedBusiness {
   averageRank: number;
   rating: number;
   reviews: number;
+  reviewCount: number;
   lastScanDate: string;
   keyword: string;
   ownerName?: string;
@@ -61,6 +63,7 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     averageRank: 4.2,
     rating: 4.9,
     reviews: 342,
+    reviewCount: 342,
     lastScanDate: 'Today, 2:15 PM',
     keyword: 'Emergency Plumber',
     source: 'manual',
@@ -81,6 +84,7 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     averageRank: 14.8,
     rating: 4.7,
     reviews: 128,
+    reviewCount: 128,
     lastScanDate: 'Yesterday',
     keyword: 'Hair Colour Salon',
     source: 'manual',
@@ -101,6 +105,7 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     averageRank: 3.8,
     rating: 4.8,
     reviews: 215,
+    reviewCount: 215,
     lastScanDate: '2 days ago',
     keyword: 'Chiropractor Austin',
     source: 'manual',
@@ -121,6 +126,7 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     averageRank: 6.4,
     rating: 4.6,
     reviews: 94,
+    reviewCount: 94,
     lastScanDate: '3 days ago',
     keyword: 'Drain Cleaning',
     source: 'manual',
@@ -145,7 +151,10 @@ function initBusinessStorage() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           parsed.forEach((b) => {
             if (b?.id && b?.name) {
-              inMemoryBusinesses.set(b.id, b);
+              inMemoryBusinesses.set(b.id, {
+                ...b,
+                reviewCount: typeof b.reviewCount === 'number' ? b.reviewCount : (b.reviews || 0),
+              });
             }
           });
           return;
@@ -173,12 +182,9 @@ function persistBusinessesToDisk() {
     const dataDir = resolveStorageDir();
     if (!dataDir) return;
 
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
     const file = path.join(dataDir, 'businesses.json');
     const all = Array.from(inMemoryBusinesses.values());
-    fs.writeFileSync(file, JSON.stringify(all, null, 2), 'utf-8');
+    atomicWriteJsonSync(file, all);
   } catch (err) {
     console.warn('BusinessStore: Failed writing businesses to disk (continuing in-memory):', err);
   }
@@ -225,6 +231,7 @@ export function saveBusiness(data: {
   averageRank?: number;
   rating?: number;
   reviews?: number;
+  reviewCount?: number;
   lastScanDate?: string;
   keyword?: string;
   ownerName?: string;
@@ -240,6 +247,13 @@ export function saveBusiness(data: {
   const now = new Date().toISOString();
 
   const existing = inMemoryBusinesses.get(id);
+
+  const reviewsVal =
+    typeof data.reviews === 'number'
+      ? data.reviews
+      : typeof data.reviewCount === 'number'
+      ? data.reviewCount
+      : existing?.reviews ?? 0;
 
   const record: ManagedBusiness = {
     id,
@@ -258,7 +272,8 @@ export function saveBusiness(data: {
     top3Percentage: typeof data.top3Percentage === 'number' ? data.top3Percentage : existing?.top3Percentage ?? 0,
     averageRank: typeof data.averageRank === 'number' ? data.averageRank : existing?.averageRank ?? 15,
     rating: typeof data.rating === 'number' ? data.rating : existing?.rating ?? 4.8,
-    reviews: typeof data.reviews === 'number' ? data.reviews : existing?.reviews ?? 0,
+    reviews: reviewsVal,
+    reviewCount: reviewsVal,
     lastScanDate: data.lastScanDate || existing?.lastScanDate || 'Just now',
     keyword: data.keyword || existing?.keyword || data.category,
     ownerName: data.ownerName || existing?.ownerName,
@@ -282,9 +297,18 @@ export function updateBusiness(id: string, updates: Partial<ManagedBusiness>): M
   const existing = inMemoryBusinesses.get(id);
   if (!existing) return null;
 
+  const reviewsVal =
+    typeof updates.reviews === 'number'
+      ? updates.reviews
+      : typeof updates.reviewCount === 'number'
+      ? updates.reviewCount
+      : existing.reviews;
+
   const updated: ManagedBusiness = {
     ...existing,
     ...updates,
+    reviews: reviewsVal,
+    reviewCount: reviewsVal,
     id,
     updatedAt: new Date().toISOString(),
   };
@@ -294,10 +318,15 @@ export function updateBusiness(id: string, updates: Partial<ManagedBusiness>): M
   return updated;
 }
 
-export function deleteBusiness(id: string): { success: boolean; deletedBusiness?: ManagedBusiness; deletedScansCount: number } {
+export function deleteBusiness(id: string): {
+  success: boolean;
+  deletedId: string;
+  deletedBusiness?: ManagedBusiness;
+  deletedScansCount: number;
+} {
   const business = inMemoryBusinesses.get(id);
   if (!business) {
-    return { success: false, deletedScansCount: 0 };
+    return { success: false, deletedId: id, deletedScansCount: 0 };
   }
 
   // Purge/cascade associated scans
@@ -306,5 +335,5 @@ export function deleteBusiness(id: string): { success: boolean; deletedBusiness?
   inMemoryBusinesses.delete(id);
   persistBusinessesToDisk();
 
-  return { success: true, deletedBusiness: business, deletedScansCount };
+  return { success: true, deletedId: id, deletedBusiness: business, deletedScansCount };
 }
