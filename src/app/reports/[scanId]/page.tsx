@@ -22,6 +22,11 @@ import type { LocalSeoAuditOutput } from '../../../lib/ai/audit-generator.ts';
 import type { DiscoveredKeyword } from '../../../lib/keywords/keyword-discovery.ts';
 import { buildInitialKeywordScanCache } from '../../../lib/geo/keyword-scans.ts';
 import {
+  trackReportOpened,
+  trackReportShared,
+  useProspectDwellTracker,
+} from '../../../lib/telemetry/prospect-telemetry.ts';
+import {
   MapPin,
   ArrowLeft,
   Printer,
@@ -132,8 +137,21 @@ export const ReportPage: React.FC<ReportPageProps> = ({
     fetchScanData();
   }, [resolvedScanId, propSummary, propAudit]);
 
+  const currentBusinessName = scanSummary?.target?.businessName || 'Local Business';
+
+  // Telemetry: track prospect dwell reading time
+  useProspectDwellTracker(resolvedScanId, currentBusinessName);
+
+  // Telemetry: track report opened
+  useEffect(() => {
+    if (scanSummary?.target?.businessName) {
+      trackReportOpened(resolvedScanId, scanSummary.target.businessName);
+    }
+  }, [resolvedScanId, scanSummary?.target?.businessName]);
+
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
+    trackReportShared(resolvedScanId, currentBusinessName, 'clipboard_copy');
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };

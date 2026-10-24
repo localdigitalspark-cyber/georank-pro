@@ -25,12 +25,14 @@ import {
   Zap,
   ChevronRight,
   X,
+  LineChart,
 } from 'lucide-react';
 import { useBranding } from '../../lib/context/BrandingContext.tsx';
 
 export type MainNavView =
   | 'dashboard'
   | 'businesses'
+  | 'prospects'
   | 'find-businesses'
   | 'scans'
   | 'pitch-pack'
@@ -67,6 +69,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const workspaceItems: { id: MainNavView; label: string; icon: any; badge?: string; hasAi?: boolean }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'businesses', label: 'Businesses', icon: Building2, badge: 'Active' },
+    { id: 'prospects', label: 'Prospects & Pipeline', icon: LineChart, badge: 'Telemetry' },
     { id: 'find-businesses', label: 'Find businesses', icon: Compass },
     { id: 'scans', label: 'Scans', icon: ScanLine },
     { id: 'pitch-pack', label: 'Pitch Pack', icon: Presentation, hasAi: true },
@@ -98,6 +101,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           return (
             <button
               key={item.id}
+              data-testid={`nav-${item.id}`}
               onClick={() => {
                 onSelectNav(item.id);
                 if (onCloseMobile) onCloseMobile();

@@ -29,6 +29,7 @@ import { useBranding } from '../lib/context/BrandingContext.tsx';
 
 // Dedicated Views
 import { DashboardOverview } from '../components/views/DashboardOverview.tsx';
+import { ProspectsPipelineView } from '../components/views/ProspectsPipelineView.tsx';
 import { BusinessesListView, type BusinessCardItem } from '../components/views/BusinessesListView.tsx';
 import { FindBusinessesView } from '../components/views/FindBusinessesView.tsx';
 import { ScansListView, type ScanMasterRecord } from '../components/views/ScansListView.tsx';
@@ -1214,6 +1215,23 @@ export default function DashboardPage() {
               onLocationResolved={handleLocationResolved}
               centerLat={centerLat}
               centerLng={centerLng}
+            />
+          )}
+
+          {/* VIEW: Prospects & Pipeline Analytics (Telemetry Engine) */}
+          {activeNav === 'prospects' && (
+            <ProspectsPipelineView
+              onSelectBusiness={(name) => {
+                setBusinessName(name);
+                setActiveNav('businesses');
+                setBusinessWorkspaceOpen(true);
+              }}
+              onOpenPitchPack={(name) => {
+                setBusinessName(name);
+                setActiveNav('businesses');
+                setBusinessWorkspaceOpen(true);
+                setBusinessTab('prospecting');
+              }}
             />
           )}
 

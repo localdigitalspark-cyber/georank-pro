@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
+import { trackReportShared } from '../../lib/telemetry/prospect-telemetry.ts';
 
 interface ShareReportModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const ShareReportModal: React.FC<ShareReportModalProps> = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
+    trackReportShared(scanId, businessName, 'share_modal_copy');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

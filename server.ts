@@ -21,6 +21,12 @@ import { buildInitialKeywordScanCache } from './src/lib/geo/keyword-scans.ts';
 import { scanGridNode, summarizeGridScan, isDataForSeoConfigured } from './src/lib/serp/adapter.ts';
 import { saveScan, getScan, listScans, getScansForBusiness, deleteScansForBusiness } from './src/lib/storage/scan-store.ts';
 import {
+  saveProspectEvent,
+  listProspectEvents,
+  getProspectAnalyticsSummary,
+  clearProspectEvents,
+} from './src/lib/storage/analytics-store.ts';
+import {
   listBusinesses,
   getBusiness,
   saveBusiness,
@@ -843,6 +849,82 @@ app.get(['/api/scans/:scanId', '/api/scans'], (req: Request, res: Response) => {
     success: true,
     data: scan,
   });
+});
+
+/**
+ * Prospect Engagement Analytics & Telemetry API
+ */
+app.post('/api/analytics/events', (req: Request, res: Response) => {
+  try {
+    const body = req.body || {};
+    const { scanId, businessName, eventType, details, sessionId } = body;
+
+    if (!eventType) {
+      return res.status(400).json({ error: 'Missing eventType in analytics payload' });
+    }
+
+    const event = saveProspectEvent({
+      scanId: scanId || 'latest',
+      businessName: businessName || 'Local Business',
+      eventType,
+      details: details || {},
+      sessionId:
+        sessionId ||
+        (typeof req.headers['x-session-id'] === 'string' ? req.headers['x-session-id'] : undefined),
+      userAgent: (req.headers['user-agent'] as string) || undefined,
+      ip: req.ip || undefined,
+    });
+
+    res.json({
+      success: true,
+      event,
+    });
+  } catch (err: any) {
+    console.error('Failed to log prospect analytics event:', err);
+    res.status(500).json({ error: err?.message || 'Failed recording analytics event' });
+  }
+});
+
+app.get('/api/analytics/summary', (_req: Request, res: Response) => {
+  try {
+    const summary = getProspectAnalyticsSummary();
+    res.json({
+      success: true,
+      data: summary,
+    });
+  } catch (err: any) {
+    console.error('Failed fetching prospect analytics summary:', err);
+    res.status(500).json({ error: err?.message || 'Failed generating analytics summary' });
+  }
+});
+
+app.get('/api/analytics/events', (req: Request, res: Response) => {
+  try {
+    const scanId = req.query.scanId as string | undefined;
+    const businessName = req.query.businessName as string | undefined;
+    const eventType = req.query.eventType as string | undefined;
+
+    const events = listProspectEvents({ scanId, businessName, eventType });
+    res.json({
+      success: true,
+      data: events,
+    });
+  } catch (err: any) {
+    console.error('Failed fetching prospect events:', err);
+    res.status(500).json({ error: err?.message || 'Failed retrieving analytics events' });
+  }
+});
+
+app.post('/api/analytics/reset', (_req: Request, res: Response) => {
+  try {
+    clearProspectEvents();
+    res.json({
+      success: true,
+      message: 'Analytics events reset successfully',
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Failed resetting analytics' });
+  }
 });
 
 /**

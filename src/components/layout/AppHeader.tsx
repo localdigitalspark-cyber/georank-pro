@@ -31,6 +31,8 @@ import {
   CreditCard,
   Receipt,
   FileText,
+  LineChart,
+  TrendingUp,
 } from 'lucide-react';
 import { useBranding } from '../../lib/context/BrandingContext.tsx';
 import type { SerpScanMode } from '../../lib/serp/adapter.ts';
@@ -115,6 +117,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <div className="flex items-center space-x-1.5 font-semibold text-slate-900 bg-slate-100/70 px-2 py-0.5 rounded-md">
               <LayoutDashboard className="w-3.5 h-3.5 text-emerald-600" />
               <span>Dashboard Overview</span>
+            </div>
+          </>
+        );
+      case 'prospects':
+        return (
+          <>
+            <span className="text-slate-500 font-medium">Workspace</span>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center space-x-1.5 font-semibold text-slate-900 bg-slate-100/70 px-2 py-0.5 rounded-md">
+              <LineChart className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Prospects &amp; Pipeline</span>
             </div>
           </>
         );

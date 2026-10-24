@@ -28,6 +28,11 @@ import {
   type DiscoveredKeyword,
 } from '../../lib/keywords/keyword-discovery.ts';
 import {
+  trackSliderAdjusted,
+  trackScenarioChanged,
+  trackCtaClicked,
+} from '../../lib/telemetry/prospect-telemetry.ts';
+import {
   Sparkles,
   Printer,
   DollarSign,
@@ -393,7 +398,23 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const comp1Reviews = safeSummary.dominantCompetitors?.[0]?.reviews ?? 280;
 
   const handlePrint = () => {
+    trackCtaClicked(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'print_pdf');
     window.print();
+  };
+
+  const handleScenarioChange = (newScenario: 'conservative' | 'expected' | 'leader') => {
+    setScenario(newScenario);
+    trackScenarioChanged(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', newScenario);
+  };
+
+  const handleAvgTicketChange = (val: number) => {
+    setAvgTicketValue(val);
+    trackSliderAdjusted(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'avgTicketValue', val);
+  };
+
+  const handleCloseRateChange = (val: number) => {
+    setCloseRate(val);
+    trackSliderAdjusted(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'closeRate', val);
   };
 
   return (
@@ -532,7 +553,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setScenario(item.id)}
+                    onClick={() => handleScenarioChange(item.id)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                       active
                         ? 'bg-emerald-600 text-white shadow-xs'
@@ -565,7 +586,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 max="2500"
                 step="25"
                 value={avgTicketValue}
-                onChange={(e) => setAvgTicketValue(parseInt(e.target.value) || 450)}
+                onChange={(e) => handleAvgTicketChange(parseInt(e.target.value) || 450)}
                 data-testid="slider-avg-ticket"
                 className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
               />
@@ -593,7 +614,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 max="60"
                 step="5"
                 value={closeRate}
-                onChange={(e) => setCloseRate(parseInt(e.target.value) || 30)}
+                onChange={(e) => handleCloseRateChange(parseInt(e.target.value) || 30)}
                 data-testid="slider-close-rate"
                 className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
               />
@@ -1214,6 +1235,9 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                     ? `tel:${branding.phone.replace(/[^0-9+]/g, '')}`
                     : `mailto:${branding.contactEmail}?subject=15-Minute Strategy Call for ${encodeURIComponent(safeSummary.target.businessName || 'our business')}`
                 }
+                onClick={() => {
+                  trackCtaClicked(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'strategy_call');
+                }}
                 className="inline-flex items-center justify-center space-x-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-md hover:shadow-emerald-500/30 transition cursor-pointer"
               >
                 <Phone className="w-4 h-4 text-slate-950 stroke-[2.5]" />
@@ -1222,6 +1246,9 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
               <a
                 href={`mailto:${branding.contactEmail}?subject=Activate Full Visibility Plan for ${encodeURIComponent(safeSummary.target.businessName || 'our business')}&body=Hi ${encodeURIComponent(branding.agencyName)},%0D%0A%0D%0AWe reviewed our Geo-Grid Rank Audit report and would like to activate the full visibility plan to reclaim our 3-Pack rankings.%0D%0A%0D%0ABusiness: ${encodeURIComponent(safeSummary.target.businessName || '')}%0D%0ATarget Keyword: ${encodeURIComponent(safeSummary.keyword || '')}%0D%0A`}
+                onClick={() => {
+                  trackCtaClicked(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'activate_plan');
+                }}
                 className="inline-flex items-center justify-center space-x-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer backdrop-blur-xs"
               >
                 <Sparkles className="w-4 h-4 text-emerald-400" />
@@ -1270,7 +1297,13 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
               <button
                 type="button"
-                onClick={() => setShowAuditTrail(!showAuditTrail)}
+                onClick={() => {
+                  const nextState = !showAuditTrail;
+                  setShowAuditTrail(nextState);
+                  if (nextState) {
+                    trackCtaClicked(safeSummary.scanId || 'latest', safeSummary.target.businessName || 'Local Business', 'serp_evidence');
+                  }
+                }}
                 className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
