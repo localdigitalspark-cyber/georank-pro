@@ -33,6 +33,12 @@ import {
   trackCtaClicked,
 } from '../../lib/telemetry/prospect-telemetry.ts';
 import {
+  calculateOmnichannelRevenueLeakage,
+  DEFAULT_LEAKAGE_FACTORS,
+  type OmnichannelLeakageFactors,
+  type OmnichannelLeakageResult,
+} from '../../lib/calculator/revenue-leakage.ts';
+import {
   Sparkles,
   Printer,
   DollarSign,
@@ -55,6 +61,23 @@ import {
   Info,
   ShieldCheck,
   ExternalLink,
+  Smartphone,
+  MessageSquare,
+  PhoneMissed,
+  MessageCircle,
+  Calendar,
+  CalendarCheck,
+  Clock,
+  Mail,
+  Gift,
+  Repeat,
+  Zap,
+  Check,
+  X,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert,
 } from 'lucide-react';
 
 export interface AuditDeckProps {
@@ -174,6 +197,29 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [closeRate, setCloseRate] = useState<number>(30); // 30% default
   const [showMethodology, setShowMethodology] = useState<boolean>(false);
   const [showAuditTrail, setShowAuditTrail] = useState<boolean>(false);
+
+  // Omnichannel Digital Leakage Operational State
+  const [monthlySiteVisitors, setMonthlySiteVisitors] = useState<number>(650);
+  const [pastCustomerListSize, setPastCustomerListSize] = useState<number>(380);
+
+  // 1. Conversion Leakage
+  const [hasMobileFastSite, setHasMobileFastSite] = useState<boolean>(false);
+
+  // 2. Instant Communications Leakage
+  const [hasWebsiteChatbot, setHasWebsiteChatbot] = useState<boolean>(false);
+  const [hasMissedCallSmsTextback, setHasMissedCallSmsTextback] = useState<boolean>(false);
+  const [hasWhatsAppOrMessenger, setHasWhatsAppOrMessenger] = useState<boolean>(false);
+
+  // 3. Booking Calendar Friction
+  const [hasOnlineBookingCalendar, setHasOnlineBookingCalendar] = useState<boolean>(false);
+
+  // 4. Database Reactivation & Retention
+  const [hasEmailNewsletterOrOffers, setHasEmailNewsletterOrOffers] = useState<boolean>(false);
+  const [hasRewardsReferralProgram, setHasRewardsReferralProgram] = useState<boolean>(false);
+
+  // Accordion & Info Toggles
+  const [showOmnichannelControls, setShowOmnichannelControls] = useState<boolean>(true);
+  const [showOmnichannelMethodology, setShowOmnichannelMethodology] = useState<boolean>(false);
 
   // Defensive merge with fallback defaults
   const safeAudit: LocalSeoAuditOutput = {
@@ -343,6 +389,43 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
   // 6. Annual Revenue Left on the Table = Monthly Revenue Leaking * 12
   const annualRevenueLeaking = monthlyRevenueLeaking * 12;
+
+  // ---------------------------------------------------------------------------
+  // OMNICHANNEL REVENUE LEAKAGE & BOTTLENECK ENGINE
+  // ---------------------------------------------------------------------------
+  const omnichannelResult: OmnichannelLeakageResult = useMemo(() => {
+    return calculateOmnichannelRevenueLeakage({
+      monthlySiteVisitors,
+      avgTicketValue,
+      leadCloseRate: closeRate,
+      hasMobileFastSite,
+      hasWebsiteChatbot,
+      hasMissedCallSmsTextback,
+      hasWhatsAppOrMessenger,
+      hasOnlineBookingCalendar,
+      pastCustomerListSize,
+      hasEmailNewsletterOrOffers,
+      hasRewardsReferralProgram,
+    });
+  }, [
+    monthlySiteVisitors,
+    avgTicketValue,
+    closeRate,
+    hasMobileFastSite,
+    hasWebsiteChatbot,
+    hasMissedCallSmsTextback,
+    hasWhatsAppOrMessenger,
+    hasOnlineBookingCalendar,
+    pastCustomerListSize,
+    hasEmailNewsletterOrOffers,
+    hasRewardsReferralProgram,
+  ]);
+
+  const combinedMonthlyLeaking =
+    monthlyRevenueLeaking + omnichannelResult.totals.totalMonthlyLeakage;
+  const combinedAnnualLeaking = combinedMonthlyLeaking * 12;
+  const combinedTotalRecoverableJobs =
+    closedDeals + omnichannelResult.totals.totalLostJobsMonthly;
 
   // Core Trade Keywords for Multi-Keyword Opportunity Breakdown (top 4-5)
   const coreKeywords = useMemo(() => {
@@ -811,6 +894,758 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
               <strong className="font-bold text-amber-950">Over 74% of local customers</strong> never look past the first 3 listings on Google Maps. Because your profile drops to position #5+ outside your immediate location, these calls are going directly to <strong className="font-bold text-slate-900 underline decoration-amber-400 underline-offset-2">{topCompetitor1}</strong> and <strong className="font-bold text-slate-900 underline decoration-amber-400 underline-offset-2">{topCompetitor2}</strong>.
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 2. SECTION: OMNICHANNEL REVENUE LEAKAGE & OPERATIONAL BOTTLENECK AUDIT   */}
+        {/* ========================================================================= */}
+        <div
+          data-testid="omnichannel-leakage-section"
+          className="bg-gradient-to-br from-white via-slate-50/70 to-blue-50/20 p-6 sm:p-7 rounded-2xl border-2 border-slate-200/90 shadow-sm space-y-6 print:break-inside-avoid"
+        >
+          {/* Header & Score Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+            <div>
+              <div className="flex items-center space-x-2 text-blue-700">
+                <Layers className="w-5 h-5 text-blue-600 stroke-[2.5]" />
+                <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-900">
+                  Omnichannel Revenue Leakage &amp; Bottleneck Audit
+                </h2>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                Beyond Google Maps rankings: modeling lost customer turnover across website conversion, real-time response, self-service booking, and client retention.
+              </p>
+            </div>
+
+            {/* Overall Leaky Bucket Deficit Score */}
+            <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold hidden sm:inline">
+                Friction Score:
+              </span>
+              <span
+                data-testid="omnichannel-deficit-badge"
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold border ${
+                  omnichannelResult.totals.operationalDeficitScore >= 60
+                    ? 'bg-rose-50 text-rose-800 border-rose-300'
+                    : omnichannelResult.totals.operationalDeficitScore >= 30
+                    ? 'bg-amber-50 text-amber-800 border-amber-300'
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                }`}
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>
+                  {omnichannelResult.totals.operationalDeficitScore} / 100 Operational Leakage
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Controls & Operational Checklist Bar */}
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4 print:hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center space-x-2">
+                <Calculator className="w-4 h-4 text-blue-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Interactive Operational Checklist &amp; Traffic Baselines
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOmnichannelControls(!showOmnichannelControls)}
+                className="text-xs text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1 cursor-pointer transition"
+              >
+                <span>{showOmnichannelControls ? 'Hide Controls' : 'Customize Inputs'}</span>
+                {showOmnichannelControls ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {showOmnichannelControls && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Sliders: Monthly Web Visitors & Past Customer Database */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Slider: Monthly Site Visitors */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <Globe className="w-4 h-4 text-emerald-600" />
+                        <span>Estimated Monthly Site Visitors:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {monthlySiteVisitors.toLocaleString()} / mo
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="100"
+                      max="3000"
+                      step="50"
+                      value={monthlySiteVisitors}
+                      onChange={(e) => setMonthlySiteVisitors(parseInt(e.target.value) || 650)}
+                      data-testid="slider-site-visitors"
+                      className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>100 visitors</span>
+                      <span className="text-slate-500 font-medium">Estimated local organic &amp; direct</span>
+                      <span>3,000 visitors</span>
+                    </div>
+                  </div>
+
+                  {/* Slider: Past Customer Database List */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <Repeat className="w-4 h-4 text-purple-600" />
+                        <span>Past Customer Database Size:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {pastCustomerListSize.toLocaleString()} contacts
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="50"
+                      max="2500"
+                      step="25"
+                      value={pastCustomerListSize}
+                      onChange={(e) => setPastCustomerListSize(parseInt(e.target.value) || 380)}
+                      data-testid="slider-past-customers"
+                      className="w-full accent-purple-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>50 contacts</span>
+                      <span className="text-slate-500 font-medium">Previous invoices &amp; CRM contacts</span>
+                      <span>2,500 contacts</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7 Operational Capability Toggles */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
+                    Toggle Current Operational State (Simulate Leaks vs. Solutions):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {/* Toggle 1: Mobile Fast Site */}
+                    <div
+                      onClick={() => setHasMobileFastSite(!hasMobileFastSite)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasMobileFastSite
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <Smartphone className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">Fast Mobile Speed (&lt;2.5s)</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasMobileFastSite ? '✓ Active & Fast' : '⚠️ Slow / High Bounce'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasMobileFastSite ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasMobileFastSite ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 2: Website Chatbot */}
+                    <div
+                      onClick={() => setHasWebsiteChatbot(!hasWebsiteChatbot)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasWebsiteChatbot
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <MessageSquare className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">24/7 Web AI Lead Chatbot</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasWebsiteChatbot ? '✓ Captures Leads 24/7' : '⚠️ Night-time Dropoff'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasWebsiteChatbot ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasWebsiteChatbot ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 3: Missed Call SMS Textback */}
+                    <div
+                      onClick={() => setHasMissedCallSmsTextback(!hasMissedCallSmsTextback)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasMissedCallSmsTextback
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <PhoneMissed className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">Missed-Call SMS Text-Back</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasMissedCallSmsTextback ? '✓ Auto-texts in 30s' : '⚠️ Calls Next Rival'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasMissedCallSmsTextback ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasMissedCallSmsTextback ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 4: WhatsApp / Social Chat */}
+                    <div
+                      onClick={() => setHasWhatsAppOrMessenger(!hasWhatsAppOrMessenger)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasWhatsAppOrMessenger
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <MessageCircle className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">WhatsApp / Social Direct Chat</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasWhatsAppOrMessenger ? '✓ 1-Tap Mobile Chat' : '⚠️ Missing Quick Chat'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasWhatsAppOrMessenger ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasWhatsAppOrMessenger ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 5: Online Booking Calendar */}
+                    <div
+                      onClick={() => setHasOnlineBookingCalendar(!hasOnlineBookingCalendar)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasOnlineBookingCalendar
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <CalendarCheck className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">Online Booking Calendar</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasOnlineBookingCalendar ? '✓ 24/7 Self-Service' : '⚠️ Phone-Tag Only'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasOnlineBookingCalendar ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasOnlineBookingCalendar ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 6: Email Newsletter & Offers */}
+                    <div
+                      onClick={() => setHasEmailNewsletterOrOffers(!hasEmailNewsletterOrOffers)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        hasEmailNewsletterOrOffers
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <Mail className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">Email Newsletter &amp; VIP Offers</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasEmailNewsletterOrOffers ? '✓ Re-activates Clients' : '⚠️ Dormant List'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasEmailNewsletterOrOffers ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasEmailNewsletterOrOffers ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 7: Loyalty / Referral Program */}
+                    <div
+                      onClick={() => setHasRewardsReferralProgram(!hasRewardsReferralProgram)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none sm:col-span-2 lg:col-span-1 ${
+                        hasRewardsReferralProgram
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <Gift className="w-4 h-4 shrink-0 text-slate-500" />
+                        <div>
+                          <span className="font-bold block text-xs">Customer Referral Program</span>
+                          <span className="text-[10px] text-slate-500">
+                            {hasRewardsReferralProgram ? '✓ Word-of-Mouth Automated' : '⚠️ Zero Inbound Referrals'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          hasRewardsReferralProgram ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {hasRewardsReferralProgram ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 4 In-Depth Bottleneck Breakdown Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Bottleneck 1: Website Online Conversion */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        01 • Website Online Conversion
+                      </h4>
+                      <span className="text-[10px] text-slate-500">Mobile Speed &amp; Instant CTAs</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      omnichannelResult.conversion.hasIssue
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {omnichannelResult.conversion.hasIssue ? '⚠️ LEAKING REVENUE' : '✓ FULLY OPTIMIZED'}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-baseline justify-between border-b border-slate-100 pb-2">
+                  <span className="text-[11px] font-medium text-slate-500">Estimated Monthly Loss:</span>
+                  <div className="text-right">
+                    <span className="text-lg font-black font-mono text-rose-700">
+                      {currencySymbol}{omnichannelResult.conversion.monthlyLeakage.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-rose-600">/ mo</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-mono">
+                      -{omnichannelResult.conversion.lostJobsMonthly} jobs/mo ({currencySymbol}
+                      {omnichannelResult.conversion.annualLeakage.toLocaleString()}/yr)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-rose-50/60 p-2.5 rounded-xl border border-rose-100 text-xs text-rose-950 space-y-1">
+                  <span className="font-bold text-[10px] uppercase text-rose-800 block">
+                    Verified Industry Benchmark:
+                  </span>
+                  <p className="text-[11px] leading-relaxed text-rose-900">
+                    {omnichannelResult.conversion.industryStat}
+                  </p>
+                </div>
+
+                <div className="text-xs text-slate-600 leading-relaxed">
+                  <strong className="text-slate-800">Operational Bottleneck: </strong>
+                  {omnichannelResult.conversion.impactDescription}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                <span className="font-bold text-[10px] uppercase text-emerald-900 block mb-0.5">
+                  The Revenue Recovery Fix:
+                </span>
+                <p className="text-[11px] leading-relaxed">{omnichannelResult.conversion.remedy}</p>
+              </div>
+            </div>
+
+            {/* Bottleneck 2: Missed Real-Time Communications */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                      <PhoneMissed className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        02 • Missed Real-Time Communications
+                      </h4>
+                      <span className="text-[10px] text-slate-500">24/7 AI Chat &amp; Missed Calls</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      omnichannelResult.communications.hasIssue
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {omnichannelResult.communications.hasIssue ? '⚠️ CRITICAL LEAK' : '✓ 24/7 INSTANT COVERAGE'}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-baseline justify-between border-b border-slate-100 pb-2">
+                  <span className="text-[11px] font-medium text-slate-500">Estimated Monthly Loss:</span>
+                  <div className="text-right">
+                    <span className="text-lg font-black font-mono text-amber-800">
+                      {currencySymbol}{omnichannelResult.communications.monthlyLeakage.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-amber-700">/ mo</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-mono">
+                      -{omnichannelResult.communications.totalLostJobsMonthly} jobs/mo ({currencySymbol}
+                      {omnichannelResult.communications.annualLeakage.toLocaleString()}/yr)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50/60 p-2.5 rounded-xl border border-amber-100 text-xs text-amber-950 space-y-1">
+                  <span className="font-bold text-[10px] uppercase text-amber-800 block">
+                    Verified Industry Benchmark:
+                  </span>
+                  <p className="text-[11px] leading-relaxed text-amber-900">
+                    {omnichannelResult.communications.industryStat}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 text-[10px] font-mono">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    No Chatbot: -{omnichannelResult.communications.chatbotLostJobs} jobs
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    Missed Calls: -{omnichannelResult.communications.missedCallLostJobs} jobs
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    Social/WhatsApp: -{omnichannelResult.communications.socialChatLostJobs} jobs
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                <span className="font-bold text-[10px] uppercase text-emerald-900 block mb-0.5">
+                  The Revenue Recovery Fix:
+                </span>
+                <p className="text-[11px] leading-relaxed">{omnichannelResult.communications.remedy}</p>
+              </div>
+            </div>
+
+            {/* Bottleneck 3: Self-Service Booking Friction */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                      <CalendarCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        03 • Self-Service Booking Friction
+                      </h4>
+                      <span className="text-[10px] text-slate-500">24/7 Online Calendar vs Phone-Tag</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      omnichannelResult.booking.hasIssue
+                        ? 'bg-blue-50 text-blue-800 border-blue-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {omnichannelResult.booking.hasIssue ? '⚠️ AFTER-HOURS LOSS' : '✓ 24/7 SELF-BOOKING'}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-baseline justify-between border-b border-slate-100 pb-2">
+                  <span className="text-[11px] font-medium text-slate-500">Estimated Monthly Loss:</span>
+                  <div className="text-right">
+                    <span className="text-lg font-black font-mono text-blue-800">
+                      {currencySymbol}{omnichannelResult.booking.monthlyLeakage.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-blue-700">/ mo</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-mono">
+                      -{omnichannelResult.booking.lostJobsMonthly} jobs/mo ({currencySymbol}
+                      {omnichannelResult.booking.annualLeakage.toLocaleString()}/yr)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50/60 p-2.5 rounded-xl border border-blue-100 text-xs text-blue-950 space-y-1">
+                  <span className="font-bold text-[10px] uppercase text-blue-800 block">
+                    Verified Industry Benchmark:
+                  </span>
+                  <p className="text-[11px] leading-relaxed text-blue-900">
+                    {omnichannelResult.booking.industryStat}
+                  </p>
+                </div>
+
+                <div className="text-xs text-slate-600 leading-relaxed">
+                  <strong className="text-slate-800">Operational Bottleneck: </strong>
+                  {omnichannelResult.booking.impactDescription}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                <span className="font-bold text-[10px] uppercase text-emerald-900 block mb-0.5">
+                  The Revenue Recovery Fix:
+                </span>
+                <p className="text-[11px] leading-relaxed">{omnichannelResult.booking.remedy}</p>
+              </div>
+            </div>
+
+            {/* Bottleneck 4: Retention & Database Reactivation */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600">
+                      <Repeat className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        04 • Retention &amp; Database Deficits
+                      </h4>
+                      <span className="text-[10px] text-slate-500">Dormant Customer List &amp; Referrals</span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                      omnichannelResult.retention.hasIssue
+                        ? 'bg-purple-50 text-purple-800 border-purple-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {omnichannelResult.retention.hasIssue ? '⚠️ DORMANT LIST' : '✓ ACTIVE RETENTION ENGINE'}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex items-baseline justify-between border-b border-slate-100 pb-2">
+                  <span className="text-[11px] font-medium text-slate-500">Estimated Monthly Loss:</span>
+                  <div className="text-right">
+                    <span className="text-lg font-black font-mono text-purple-800">
+                      {currencySymbol}{omnichannelResult.retention.monthlyLeakage.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-purple-700">/ mo</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-mono">
+                      -{omnichannelResult.retention.totalLostJobsMonthly} jobs/mo ({currencySymbol}
+                      {omnichannelResult.retention.annualLeakage.toLocaleString()}/yr)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50/60 p-2.5 rounded-xl border border-purple-100 text-xs text-purple-950 space-y-1">
+                  <span className="font-bold text-[10px] uppercase text-purple-800 block">
+                    Verified Industry Benchmark:
+                  </span>
+                  <p className="text-[11px] leading-relaxed text-purple-900">
+                    {omnichannelResult.retention.industryStat}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 text-[10px] font-mono">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    Missed Re-bookings: -{omnichannelResult.retention.newsletterLostJobs} jobs/mo
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                    Missed Referrals: -{omnichannelResult.retention.referralLostJobs} jobs/mo
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100">
+                <span className="font-bold text-[10px] uppercase text-emerald-900 block mb-0.5">
+                  The Revenue Recovery Fix:
+                </span>
+                <p className="text-[11px] leading-relaxed">{omnichannelResult.retention.remedy}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Combined Total Digital Revenue Bleed Summary */}
+          <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-2xl shadow-md space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div>
+                <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold block">
+                  Aggregate Opportunity Synthesis
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-white tracking-tight mt-0.5">
+                  Combined Monthly &amp; Annual Revenue Bleed
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">
+                  Sum of Google Maps 3-Pack rank deficit + Omnichannel operational conversion bottlenecks.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-baseline gap-3">
+                <div className="bg-white/10 px-4 py-2.5 rounded-xl border border-white/10">
+                  <span className="text-[10px] font-mono text-slate-300 uppercase block font-semibold">
+                    Grand Monthly Leaking
+                  </span>
+                  <span data-testid="kpi-combined-monthly-leak" className="text-xl sm:text-2xl font-black font-mono text-rose-400">
+                    {currencySymbol}{combinedMonthlyLeaking.toLocaleString()} <span className="text-xs font-normal text-slate-300">/ mo</span>
+                  </span>
+                </div>
+                <div className="bg-emerald-500/20 px-4 py-2.5 rounded-xl border border-emerald-500/30">
+                  <span className="text-[10px] font-mono text-emerald-200 uppercase block font-semibold">
+                    Annual Money on Table
+                  </span>
+                  <span data-testid="kpi-combined-annual-leak" className="text-xl sm:text-2xl font-black font-mono text-emerald-300">
+                    {currencySymbol}{combinedAnnualLeaking.toLocaleString()} <span className="text-xs font-normal text-emerald-200">/ yr</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Proportional Leak Breakdown Bar */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-800">
+              <div className="flex justify-between text-[11px] text-slate-400 font-mono">
+                <span>Revenue Leak Distribution Across Channels:</span>
+                <span className="text-emerald-400 font-bold">
+                  +{combinedTotalRecoverableJobs} Total Recoverable Customer Jobs / Month
+                </span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden flex shadow-inner">
+                <div
+                  style={{
+                    width: `${Math.max(15, Math.round((monthlyRevenueLeaking / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-emerald-500 h-full"
+                  title="Google Maps 3-Pack Deficit"
+                />
+                <div
+                  style={{
+                    width: `${Math.max(10, Math.round((omnichannelResult.conversion.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-rose-500 h-full"
+                  title="Website Bounce & Speed Loss"
+                />
+                <div
+                  style={{
+                    width: `${Math.max(10, Math.round((omnichannelResult.communications.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-amber-500 h-full"
+                  title="Missed Calls & Chat Drops"
+                />
+                <div
+                  style={{
+                    width: `${Math.max(10, Math.round((omnichannelResult.booking.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-blue-500 h-full"
+                  title="Online Booking Friction"
+                />
+                <div
+                  style={{
+                    width: `${Math.max(10, Math.round((omnichannelResult.retention.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-purple-500 h-full"
+                  title="Dormant Database Loss"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3 pt-1 text-[10px] text-slate-400 font-mono">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Google 3-Pack: {currencySymbol}{monthlyRevenueLeaking.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  Website Speed: {currencySymbol}{omnichannelResult.conversion.monthlyLeakage.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Missed Calls/Chat: {currencySymbol}{omnichannelResult.communications.monthlyLeakage.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  Booking Calendar: {currencySymbol}{omnichannelResult.booking.monthlyLeakage.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-purple-500" />
+                  Retention: {currencySymbol}{omnichannelResult.retention.monthlyLeakage.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Comprehensive Opportunity & Growth Roadmap */}
+          <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-emerald-700 font-bold uppercase tracking-wider block">
+                  Actionable Implementation Blueprint
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  Comprehensive 5-Point Strategic Opportunity &amp; Growth Roadmap
+                </h3>
+              </div>
+              <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+                Phased 30–60 Day Execution
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {omnichannelResult.roadmapSteps.map((step) => (
+                <div
+                  key={step.stepNumber}
+                  className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-slate-300 transition flex flex-col md:flex-row md:items-center justify-between gap-3 group"
+                >
+                  <div className="space-y-1.5 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-800">
+                        Phase 0{step.stepNumber} • {step.timeframe}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                        {step.pillar}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+                        {step.priority}
+                      </span>
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition">
+                      {step.title}
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {step.keyDeliverable}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0 self-start md:self-auto pt-2 md:pt-0 border-t md:border-t-0 border-slate-200">
+                    <span className="text-[10px] text-slate-500 font-mono block uppercase">
+                      Est. Monthly Recovery
+                    </span>
+                    <span className="text-sm sm:text-base font-black font-mono text-emerald-700">
+                      +{currencySymbol}{step.monthlyRecoveryEst.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">/ mo</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
