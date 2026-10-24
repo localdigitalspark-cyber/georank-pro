@@ -31,7 +31,13 @@ import {
   trackSliderAdjusted,
   trackScenarioChanged,
   trackCtaClicked,
+  trackLeakageToggled,
 } from '../../lib/telemetry/prospect-telemetry.ts';
+import {
+  calculateOmnichannelLeakage,
+  type PillarId,
+  type OmnichannelLeakageReport,
+} from '../../lib/calculator/omnichannel-leakage.ts';
 import {
   calculateOmnichannelRevenueLeakage,
   DEFAULT_LEAKAGE_FACTORS,
@@ -223,6 +229,13 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [reviewVelocityMonthly, setReviewVelocityMonthly] = useState<number>(0.5);
   const [responseRatePercent, setResponseRatePercent] = useState<number>(15);
   const [monitorsMultiPlatform, setMonitorsMultiPlatform] = useState<boolean>(false);
+
+  // 5 Pillar Fix Toggles for Omnichannel Digital Infrastructure Audit
+  const [websiteConversionFixed, setWebsiteConversionFixed] = useState<boolean>(false);
+  const [speedToLeadFixed, setSpeedToLeadFixed] = useState<boolean>(false);
+  const [onlineBookingFixed, setOnlineBookingFixed] = useState<boolean>(false);
+  const [reputationFixed, setReputationFixed] = useState<boolean>(false);
+  const [retentionFixed, setRetentionFixed] = useState<boolean>(false);
 
   // Accordion & Info Toggles
   const [showOmnichannelControls, setShowOmnichannelControls] = useState<boolean>(true);
@@ -453,6 +466,55 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const combinedAnnualLeaking = combinedMonthlyLeaking * 12;
   const combinedTotalRecoverableJobs =
     closedDeals + omnichannelResult.totals.totalLostJobsMonthly;
+
+  // Omnichannel Leakage & Recovery Model (Deterministic 5-Pillar Engine)
+  const omnichannelAuditReport: OmnichannelLeakageReport = useMemo(() => {
+    return calculateOmnichannelLeakage(
+      {
+        avgTicketValue,
+        monthlyVisitors: monthlySiteVisitors,
+        closeRate,
+        websiteConversionFixed,
+        speedToLeadFixed,
+        onlineBookingFixed,
+        reputationFixed,
+        retentionFixed,
+      },
+      currencySymbol
+    );
+  }, [
+    avgTicketValue,
+    monthlySiteVisitors,
+    closeRate,
+    websiteConversionFixed,
+    speedToLeadFixed,
+    onlineBookingFixed,
+    reputationFixed,
+    retentionFixed,
+    currencySymbol,
+  ]);
+
+  const handlePillarToggle = (pillarId: PillarId, currentVal: boolean) => {
+    const newVal = !currentVal;
+    if (pillarId === 'websiteConversion') setWebsiteConversionFixed(newVal);
+    if (pillarId === 'speedToLead') setSpeedToLeadFixed(newVal);
+    if (pillarId === 'onlineBooking') setOnlineBookingFixed(newVal);
+    if (pillarId === 'reputation') setReputationFixed(newVal);
+    if (pillarId === 'retention') setRetentionFixed(newVal);
+
+    const pillar = omnichannelAuditReport.pillars[pillarId];
+    trackLeakageToggled(
+      safeSummary.scanId || 'latest',
+      safeSummary.target.businessName || 'Local Business',
+      pillarId,
+      newVal,
+      {
+        pillarTitle: pillar?.title,
+        monthlyLoss: pillar?.monthlyLoss,
+        lostJobsMonthly: pillar?.lostJobsMonthly,
+      }
+    );
+  };
 
   // Core Trade Keywords for Multi-Keyword Opportunity Breakdown (top 4-5)
   const coreKeywords = useMemo(() => {
@@ -2243,6 +2305,261 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* ⚡ OMNICHANNEL REVENUE LEAKAGE & DIGITAL INFRASTRUCTURE AUDIT             */}
+        {/* ========================================================================= */}
+        <div
+          data-testid="omnichannel-audit-deck-section"
+          className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200/90 shadow-sm space-y-6 print:break-inside-avoid"
+        >
+          {/* Header Banner */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-200">
+                  <Zap className="w-5 h-5 fill-amber-500 text-amber-500" />
+                </span>
+                <h2 className="text-base sm:text-lg font-black uppercase tracking-tight text-slate-900">
+                  ⚡ Omnichannel Revenue Leakage &amp; Digital Infrastructure Audit
+                </h2>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+                Rankings generate visibility, but conversion infrastructure captures the revenue. Below is where qualified local customers are dropping out of your sales funnel.
+              </p>
+            </div>
+
+            {/* Summary Metric Bar */}
+            <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+              {/* Monthly Leakage Pill */}
+              <div className="bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2 text-right shadow-2xs">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-rose-700 font-bold block">
+                  Total Monthly Leaking
+                </span>
+                <span className="text-base sm:text-lg font-black font-mono text-rose-700">
+                  {currencySymbol}{omnichannelAuditReport.totals.totalEstimatedMonthlyLoss.toLocaleString()}{' '}
+                  <span className="text-xs font-normal text-rose-600">/ month</span>
+                </span>
+              </div>
+
+              {/* Annual Recoverable Opportunity Pill */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3.5 py-2 text-right shadow-2xs">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-800 font-bold block">
+                  12-Mo Recoverable Potential
+                </span>
+                <span className="text-base sm:text-lg font-black font-mono text-emerald-700">
+                  {currencySymbol}{omnichannelAuditReport.totals.totalAnnualRecoverableOpportunity.toLocaleString()}{' '}
+                  <span className="text-xs font-normal text-emerald-600">/ year</span>
+                </span>
+              </div>
+
+              {/* Infrastructure Repaired Score */}
+              <div className="hidden sm:flex flex-col justify-center bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-center shadow-2xs">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold">
+                  Health Score
+                </span>
+                <span className="text-xs font-extrabold text-slate-800">
+                  {omnichannelAuditReport.totals.repairedCount}/5 Repaired
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 5-Pillar Interactive Card Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+            {omnichannelAuditReport.pillarList.map((pillar) => {
+              const isFixed = pillar.isFixed;
+              const statusColor = isFixed
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : pillar.statusType === 'critical'
+                ? 'bg-rose-100 text-rose-800 border-rose-300'
+                : pillar.statusType === 'friction'
+                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                : pillar.statusType === 'bottleneck'
+                ? 'bg-blue-50 text-blue-900 border-blue-300'
+                : pillar.statusType === 'social_proof'
+                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                : 'bg-purple-50 text-purple-900 border-purple-300';
+
+              const cardBorderClass = isFixed
+                ? 'border-emerald-300 bg-emerald-50/20'
+                : 'border-slate-200/90 bg-white hover:border-slate-300';
+
+              return (
+                <div
+                  key={pillar.id}
+                  data-testid={`pillar-card-${pillar.id}`}
+                  className={`p-5 rounded-2xl border ${cardBorderClass} shadow-xs flex flex-col justify-between space-y-4 transition group`}
+                >
+                  <div className="space-y-3">
+                    {/* Pillar Title & Status Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center space-x-2">
+                        {pillar.id === 'websiteConversion' && <Globe className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        {pillar.id === 'speedToLead' && <MessageSquare className="w-4 h-4 text-rose-600 shrink-0" />}
+                        {pillar.id === 'onlineBooking' && <Calendar className="w-4 h-4 text-blue-600 shrink-0" />}
+                        {pillar.id === 'reputation' && <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />}
+                        {pillar.id === 'retention' && <Repeat className="w-4 h-4 text-purple-600 shrink-0" />}
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                          {pillar.title}
+                        </h3>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${statusColor}`}
+                      >
+                        {pillar.statusBadge}
+                      </span>
+                    </div>
+
+                    {/* Financial Loss / Recovery Callout */}
+                    <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/70 flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-slate-500">
+                        {isFixed ? 'Projected Revenue Captured:' : 'Estimated Monthly Loss:'}
+                      </span>
+                      <div className="text-right">
+                        <span
+                          className={`text-base font-black font-mono ${
+                            isFixed ? 'text-emerald-700' : 'text-rose-700'
+                          }`}
+                        >
+                          {isFixed
+                            ? `+${currencySymbol}${pillar.monthlyLoss.toLocaleString()}`
+                            : `${currencySymbol}${pillar.monthlyLoss.toLocaleString()}`}
+                          <span className="text-xs font-normal text-slate-500"> / mo</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          {isFixed ? 'Leak plugged' : `~${pillar.lostJobsMonthly} jobs/mo loss`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottlenecks Bullet Points */}
+                    <ul className="space-y-2 text-xs text-slate-600">
+                      {pillar.bullets.map((bullet, bIdx) => (
+                        <li key={bIdx} className="flex items-start space-x-2 leading-relaxed">
+                          {isFixed ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          <span className={isFixed ? 'line-through text-slate-400' : 'text-slate-700'}>
+                            {bullet}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Industry Benchmark Note */}
+                    <div className="text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200/60 text-slate-600 italic">
+                      <span className="font-semibold text-slate-700 not-italic">Benchmark: </span>
+                      {pillar.industryBenchmark}
+                    </div>
+                  </div>
+
+                  {/* Toggle Checkbox */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <label
+                      onClick={() => handlePillarToggle(pillar.id, isFixed)}
+                      className={`flex items-center space-x-2.5 p-2.5 rounded-xl cursor-pointer transition select-none ${
+                        isFixed
+                          ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300 font-bold'
+                          : 'bg-slate-100/70 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isFixed}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer shrink-0"
+                      />
+                      <span className="text-xs">{pillar.toggleLabel}</span>
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* The Local Revenue Recovery Roadmap */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-2xl shadow-md space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">
+                  Implementation Action Blueprint
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  The Local Revenue Recovery Roadmap
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  A structured 4-step agency roadmap engineered to plug conversion leaks and maximize returns on local search traffic.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800 self-start sm:self-auto shrink-0">
+                4-Phase Execution
+              </span>
+            </div>
+
+            {/* 4 Steps Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {omnichannelAuditReport.roadmap.map((step) => (
+                <div
+                  key={step.stepNumber}
+                  className="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 p-4 rounded-xl flex flex-col justify-between space-y-3 transition group"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+                        {step.phase}
+                      </span>
+                    </div>
+                    <h4 className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition leading-snug">
+                      {step.title}
+                    </h4>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {step.deliverable}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-700 text-[10px] text-slate-400 font-mono">
+                    Target: <span className="text-emerald-400">{step.targetPillars}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recovery Roadmap CTA Bar */}
+            <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs text-slate-300 text-center sm:text-left">
+                <span className="font-bold text-white">Projected Annual Recovery: </span>
+                <span className="text-emerald-400 font-bold font-mono">
+                  +{currencySymbol}{omnichannelAuditReport.totals.totalAnnualRecoverableOpportunity.toLocaleString()} / yr
+                </span>
+                <span className="text-slate-400 ml-2">across 5 core digital channels</span>
+              </div>
+
+              <a
+                href={
+                  branding.phone
+                    ? `tel:${branding.phone.replace(/[^0-9+]/g, '')}`
+                    : `mailto:${branding.contactEmail}?subject=Claim Revenue Recovery Plan for ${encodeURIComponent(
+                        safeSummary.target.businessName || 'our business'
+                      )}`
+                }
+                onClick={() => {
+                  trackCtaClicked(
+                    safeSummary.scanId || 'latest',
+                    safeSummary.target.businessName || 'Local Business',
+                    'recovery_plan_call'
+                  );
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-md hover:shadow-emerald-500/30 transition cursor-pointer shrink-0"
+              >
+                <Phone className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                <span>Claim Your Revenue Recovery Plan &amp; Book Strategy Call</span>
+              </a>
             </div>
           </div>
         </div>

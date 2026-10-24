@@ -168,6 +168,30 @@ export function trackReportShared(scanId: string, businessName: string, shareMet
 }
 
 /**
+ * Fires leakage_toggled event whenever a prospect checks or unchecks one of the 5 pillar boxes
+ */
+export function trackLeakageToggled(
+  scanId: string,
+  businessName: string,
+  pillarId: string,
+  isFixed: boolean,
+  details?: Record<string, any>
+) {
+  sendProspectEvent({
+    scanId,
+    businessName,
+    eventType: 'leakage_toggled',
+    details: {
+      pillarId,
+      isFixed,
+      action: isFixed ? 'checked_fix' : 'unchecked_fix',
+      timestamp: new Date().toISOString(),
+      ...(details || {}),
+    },
+  });
+}
+
+/**
  * React Hook to track prospect dwell reading time
  */
 export function useProspectDwellTracker(scanId: string, businessName: string) {

@@ -24,7 +24,8 @@ export type ProspectEventType =
   | 'scenario_changed'
   | 'cta_clicked'
   | 'report_shared'
-  | 'dwell_ping';
+  | 'dwell_ping'
+  | 'leakage_toggled';
 
 export interface ProspectEvent {
   id: string;
