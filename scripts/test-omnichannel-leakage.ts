@@ -40,12 +40,25 @@ async function runOmnichannelLeakageTests() {
     hasOnlineBookingCalendar: true,
     hasEmailNewsletterOrOffers: true,
     hasRewardsReferralProgram: true,
+    totalReviews: 250,
+    avgStarRating: 4.8,
+    reviewVelocityMonthly: 5,
+    responseRatePercent: 95,
+    monitorsMultiPlatform: true,
   });
   console.log(`  [PASS] Fully Optimized Deficit Score: ${optimized.totals.operationalDeficitScore} / 100 (Expected: 0)`);
   console.log(`  [PASS] Fully Optimized Monthly Leakage: £${optimized.totals.totalMonthlyLeakage} (Expected: 0)`);
 
   if (optimized.totals.operationalDeficitScore !== 0 || optimized.totals.totalMonthlyLeakage !== 0) {
     throw new Error('Optimized calculation failed: leakage was not zero');
+  }
+
+  // Verify Reputation Mathematical Modeling
+  console.log(`  [PASS] Baseline Reputation Monthly Leakage: £${baseline.reputation.monthlyLeakage.toLocaleString()}/mo`);
+  console.log(`  [PASS] Baseline Reputation Status Badge: ${baseline.reputation.statusBadge}`);
+  console.log(`  [PASS] Baseline Reputation Penalty: -${baseline.reputation.penaltyPercent}% CTR penalty (-${baseline.reputation.missedClicksMonthly} clicks)`);
+  if (!baseline.reputation.hasIssue || baseline.reputation.penaltyPercent < 15) {
+    throw new Error('Reputation penalty calculation expected >= 15%');
   }
 
   // Verify 5-Point Strategic Roadmap
@@ -92,18 +105,40 @@ async function runOmnichannelLeakageTests() {
     const badgeText = (await badge.textContent())?.trim();
     console.log(`  [PASS] Operational Deficit Score badge rendered: "${badgeText}"`);
 
-    // 2.3 Verify 4 Bottleneck Cards
+    // 2.3 Verify 5 Bottleneck Cards (including Reputation Engine)
     const cardTitles = [
       '01 • Website Online Conversion',
       '02 • Missed Real-Time Communications',
       '03 • Self-Service Booking Friction',
       '04 • Retention & Database Deficits',
+      '05 • ⭐ Reputation, Review Velocity & Response Engine',
     ];
     for (const title of cardTitles) {
       const card = page.locator(`h4:has-text("${title}")`).first();
       await card.waitFor({ state: 'visible', timeout: 3000 });
       console.log(`  [PASS] Bottleneck Card verified: "${title}"`);
     }
+
+    // Verify Reputation Specific Elements
+    const repBadge = page.locator('text=[ ⚠️ Conversion Friction: High ]').first();
+    await repBadge.waitFor({ state: 'visible', timeout: 3000 });
+    console.log('  [PASS] Reputation Status Badge verified: [ ⚠️ Conversion Friction: High ]');
+
+    const lowVelocityGap = page.locator('text=Low Review Velocity:').first();
+    await lowVelocityGap.waitFor({ state: 'visible', timeout: 3000 });
+    console.log('  [PASS] Verified Audited Gap: Low Review Velocity');
+
+    const unansweredGap = page.locator('text=Unanswered Reviews:').first();
+    await unansweredGap.waitFor({ state: 'visible', timeout: 3000 });
+    console.log('  [PASS] Verified Audited Gap: Unanswered Reviews');
+
+    const crossPlatformGap = page.locator('text=Cross-Platform Blindspots:').first();
+    await crossPlatformGap.waitFor({ state: 'visible', timeout: 3000 });
+    console.log('  [PASS] Verified Audited Gap: Cross-Platform Blindspots');
+
+    const projectedOpp = page.locator('text=Reclaim estimated £1,400 – £3,200/mo in lost high-intent conversion volume.').first();
+    await projectedOpp.waitFor({ state: 'visible', timeout: 3000 });
+    console.log('  [PASS] Verified Projected Opportunity: £1,400 – £3,200/mo reclaim');
 
     // 2.4 Verify Grand Combined Revenue Metrics
     const combinedMonthly = page.locator('[data-testid="kpi-combined-monthly-leak"]').first();

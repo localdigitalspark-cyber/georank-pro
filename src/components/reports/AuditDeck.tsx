@@ -217,6 +217,13 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [hasEmailNewsletterOrOffers, setHasEmailNewsletterOrOffers] = useState<boolean>(false);
   const [hasRewardsReferralProgram, setHasRewardsReferralProgram] = useState<boolean>(false);
 
+  // 5. Reputation & Review Velocity Operational State
+  const [totalReviews, setTotalReviews] = useState<number>(14);
+  const [avgStarRating, setAvgStarRating] = useState<number>(4.1);
+  const [reviewVelocityMonthly, setReviewVelocityMonthly] = useState<number>(0.5);
+  const [responseRatePercent, setResponseRatePercent] = useState<number>(15);
+  const [monitorsMultiPlatform, setMonitorsMultiPlatform] = useState<boolean>(false);
+
   // Accordion & Info Toggles
   const [showOmnichannelControls, setShowOmnichannelControls] = useState<boolean>(true);
   const [showOmnichannelMethodology, setShowOmnichannelMethodology] = useState<boolean>(false);
@@ -393,6 +400,14 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   // ---------------------------------------------------------------------------
   // OMNICHANNEL REVENUE LEAKAGE & BOTTLENECK ENGINE
   // ---------------------------------------------------------------------------
+  const competitorBenchmarkReviews = useMemo(() => {
+    if (scanSummary?.dominantCompetitors && scanSummary.dominantCompetitors.length > 0) {
+      const topComp = scanSummary.dominantCompetitors[0];
+      if (topComp.reviews && topComp.reviews > 0) return topComp.reviews;
+    }
+    return 180;
+  }, [scanSummary]);
+
   const omnichannelResult: OmnichannelLeakageResult = useMemo(() => {
     return calculateOmnichannelRevenueLeakage({
       monthlySiteVisitors,
@@ -406,6 +421,12 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       pastCustomerListSize,
       hasEmailNewsletterOrOffers,
       hasRewardsReferralProgram,
+      totalReviews,
+      avgStarRating,
+      reviewVelocityMonthly,
+      responseRatePercent,
+      monitorsMultiPlatform,
+      competitorAvgReviews: competitorBenchmarkReviews,
     });
   }, [
     monthlySiteVisitors,
@@ -419,6 +440,12 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
     pastCustomerListSize,
     hasEmailNewsletterOrOffers,
     hasRewardsReferralProgram,
+    totalReviews,
+    avgStarRating,
+    reviewVelocityMonthly,
+    responseRatePercent,
+    monitorsMultiPlatform,
+    competitorBenchmarkReviews,
   ]);
 
   const combinedMonthlyLeaking =
@@ -1022,12 +1049,127 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                   </div>
                 </div>
 
-                {/* 7 Operational Capability Toggles */}
+                {/* Reputation & Review Velocity Baselines */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-slate-100">
+                  {/* Slider: Total Reviews */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                        <span>Total Reviews:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {totalReviews}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="400"
+                      step="1"
+                      value={totalReviews}
+                      onChange={(e) => setTotalReviews(parseInt(e.target.value) || 14)}
+                      data-testid="slider-total-reviews"
+                      className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>1</span>
+                      <span className="text-slate-500 font-medium">Rivals: {competitorBenchmarkReviews}+</span>
+                      <span>400</span>
+                    </div>
+                  </div>
+
+                  {/* Slider: Average Star Rating */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                        <span>Average Star Rating:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {avgStarRating.toFixed(1)} ★
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="2.5"
+                      max="5.0"
+                      step="0.1"
+                      value={avgStarRating}
+                      onChange={(e) => setAvgStarRating(parseFloat(e.target.value) || 4.1)}
+                      data-testid="slider-avg-rating"
+                      className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>2.5★</span>
+                      <span className="text-slate-500 font-medium">{avgStarRating < 4.5 ? '⚠️ Sub-4.5 Penalty' : '✓ Optimal (4.5★+)'}</span>
+                      <span>5.0★</span>
+                    </div>
+                  </div>
+
+                  {/* Slider: Review Velocity */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Monthly Velocity:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {reviewVelocityMonthly.toFixed(1)} / mo
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="12"
+                      step="0.5"
+                      value={reviewVelocityMonthly}
+                      onChange={(e) => setReviewVelocityMonthly(parseFloat(e.target.value) || 0.5)}
+                      data-testid="slider-review-velocity"
+                      className="w-full accent-blue-500 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>0/mo</span>
+                      <span className="text-slate-500 font-medium">Rivals: 4–8/mo</span>
+                      <span>12/mo</span>
+                    </div>
+                  </div>
+
+                  {/* Slider: Owner Response Rate */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
+                        <span>Owner Response Rate:</span>
+                      </span>
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                        {responseRatePercent}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={responseRatePercent}
+                      onChange={(e) => setResponseRatePercent(parseInt(e.target.value) || 15)}
+                      data-testid="slider-response-rate"
+                      className="w-full accent-purple-500 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                      <span>0%</span>
+                      <span className="text-slate-500 font-medium">{responseRatePercent < 75 ? '⚠️ Unresponded Drop' : '✓ Active'}</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 8 Operational Capability Toggles */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
                     Toggle Current Operational State (Simulate Leaks vs. Solutions):
                   </span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     {/* Toggle 1: Mobile Fast Site */}
                     <div
                       onClick={() => setHasMobileFastSite(!hasMobileFastSite)}
@@ -1193,7 +1335,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                     {/* Toggle 7: Loyalty / Referral Program */}
                     <div
                       onClick={() => setHasRewardsReferralProgram(!hasRewardsReferralProgram)}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none sm:col-span-2 lg:col-span-1 ${
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
                         hasRewardsReferralProgram
                           ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
                           : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
@@ -1214,6 +1356,33 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                         }`}
                       >
                         {hasRewardsReferralProgram ? 'ACTIVE' : 'LEAKING'}
+                      </span>
+                    </div>
+
+                    {/* Toggle 8: Multi-Platform Review Monitoring */}
+                    <div
+                      onClick={() => setMonitorsMultiPlatform(!monitorsMultiPlatform)}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition select-none ${
+                        monitorsMultiPlatform
+                          ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900'
+                          : 'bg-rose-50/50 border-rose-200 text-slate-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 text-xs">
+                        <Star className="w-4 h-4 shrink-0 text-amber-500 fill-amber-400" />
+                        <div>
+                          <span className="font-bold block text-xs">Multi-Platform Reviews</span>
+                          <span className="text-[10px] text-slate-500">
+                            {monitorsMultiPlatform ? '✓ Google + FB + Portals' : '⚠️ Cross-Platform Blindspots'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                          monitorsMultiPlatform ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {monitorsMultiPlatform ? 'ACTIVE' : 'LEAKING'}
                       </span>
                     </div>
                   </div>
@@ -1486,6 +1655,166 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 <p className="text-[11px] leading-relaxed">{omnichannelResult.retention.remedy}</p>
               </div>
             </div>
+
+            {/* Bottleneck 5: Reputation, Review Velocity & Response Engine */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4 flex flex-col justify-between md:col-span-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                      <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        05 • ⭐ Reputation, Review Velocity &amp; Response Engine
+                      </h4>
+                      <span className="text-[10px] text-slate-500">
+                        Star Rating, Review Velocity &amp; 100% Response Prominence
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-md border font-mono ${
+                      omnichannelResult.reputation.hasIssue
+                        ? 'bg-amber-50 text-amber-900 border-amber-300'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                  >
+                    {omnichannelResult.reputation.statusBadge}
+                  </span>
+                </div>
+
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-baseline justify-between border-b border-slate-100 pb-2.5 gap-2">
+                  <div>
+                    <span className="text-[11px] font-medium text-slate-500 block">
+                      Sub-4.5 Star &amp; Low Velocity Local Pack CTR Penalty:
+                    </span>
+                    <span className="text-xs font-bold font-mono text-slate-800">
+                      {omnichannelResult.reputation.penaltyPercent > 0
+                        ? `-${omnichannelResult.reputation.penaltyPercent}% Local Pack CTR Penalty (-${omnichannelResult.reputation.missedClicksMonthly} Missed High-Intent Clicks)`
+                        : '0% Penalty (Optimal 3-Pack Social Proof)'}
+                    </span>
+                  </div>
+                  <div className="sm:text-right">
+                    <span className="text-lg sm:text-xl font-black font-mono text-amber-800">
+                      {currencySymbol}{omnichannelResult.reputation.monthlyLeakage.toLocaleString()}{' '}
+                      <span className="text-xs font-normal text-amber-700">/ mo</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 block font-mono">
+                      -{omnichannelResult.reputation.lostJobsMonthly} jobs/mo ({currencySymbol}
+                      {omnichannelResult.reputation.annualLeakage.toLocaleString()}/yr)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sub-4.5 Star & Low Velocity Friction & Unresponded Review Flag */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1">
+                    <span className="font-bold text-[10px] uppercase text-amber-900 block flex items-center gap-1.5">
+                      <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
+                      Sub-4.5 Star &amp; Low Velocity Friction:
+                    </span>
+                    <p className="text-[11px] leading-relaxed text-amber-950">
+                      {omnichannelResult.reputation.impactDescription}
+                    </p>
+                    <p className="text-[10px] text-amber-800 italic pt-0.5">
+                      {omnichannelResult.reputation.industryStat}
+                    </p>
+                  </div>
+
+                  <div className="bg-rose-50/60 p-3 rounded-xl border border-rose-200 text-xs text-rose-950 space-y-1">
+                    <span className="font-bold text-[10px] uppercase text-rose-900 block flex items-center gap-1.5">
+                      <ShieldAlert className="w-3 h-3 text-rose-600" />
+                      Unresponded Review Conversion Drop:
+                    </span>
+                    <p className="text-[11px] leading-relaxed text-rose-950 font-medium">
+                      {omnichannelResult.reputation.unrespondedFlag}
+                    </p>
+                    <span className="text-[10px] text-rose-800 block">
+                      Owner Response Rate: {responseRatePercent}% (Recommended: 75%–100%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Live Reputation Baseline Metrics */}
+                <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    Rating: {avgStarRating.toFixed(1)} ★ {avgStarRating < 4.5 ? '(Sub-4.5 Penalty)' : '(Strong)'}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    Review Volume: {totalReviews} (Rival Benchmark: {competitorBenchmarkReviews}+)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    Velocity: {reviewVelocityMonthly.toFixed(1)} rev/mo (Rivals: 4–8/mo)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    Response Rate: {responseRatePercent}% {responseRatePercent < 75 ? '(Friction High)' : '(Healthy)'}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    Platforms: {monitorsMultiPlatform ? 'Google + FB + Portals' : 'Google Only (Blindspots)'}
+                  </span>
+                </div>
+
+                {/* Key Audited Gaps & Projected Opportunity */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  {/* Key Audited Gaps */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 block">
+                      Key Audited Gaps:
+                    </span>
+                    <ul className="text-xs text-slate-700 space-y-1.5 leading-relaxed">
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-600 font-bold shrink-0">•</span>
+                        <span>
+                          <strong>Low Review Velocity:</strong> {omnichannelResult.reputation.auditedGaps.velocityGap}
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-600 font-bold shrink-0">•</span>
+                        <span>
+                          <strong>Unanswered Reviews:</strong> {omnichannelResult.reputation.auditedGaps.responseGap}
+                        </span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <span className="text-amber-600 font-bold shrink-0">•</span>
+                        <span>
+                          <strong>Cross-Platform Blindspots:</strong> {omnichannelResult.reputation.auditedGaps.crossPlatformGap}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Projected Opportunity */}
+                  <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-900 block flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      Projected Opportunity:
+                    </span>
+                    <ul className="text-xs text-emerald-950 space-y-1.5 leading-relaxed">
+                      <li className="flex items-start gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{omnichannelResult.reputation.projectedOpportunity.reviewCaptureTarget}</span>
+                      </li>
+                      <li className="flex items-start gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{omnichannelResult.reputation.projectedOpportunity.aiResponderTarget}</span>
+                      </li>
+                      <li className="flex items-start gap-1.5 font-bold text-emerald-900">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                        <span>{omnichannelResult.reputation.projectedOpportunity.reclaimedRevenueRange}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100 mt-2">
+                <span className="font-bold text-[10px] uppercase text-emerald-900 block mb-0.5">
+                  The Revenue Recovery Fix:
+                </span>
+                <p className="text-[11px] leading-relaxed">{omnichannelResult.reputation.remedy}</p>
+              </div>
+            </div>
           </div>
 
           {/* Combined Total Digital Revenue Bleed Summary */}
@@ -1534,38 +1863,45 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden flex shadow-inner">
                 <div
                   style={{
-                    width: `${Math.max(15, Math.round((monthlyRevenueLeaking / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                    width: `${Math.max(12, Math.round((monthlyRevenueLeaking / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
                   }}
                   className="bg-emerald-500 h-full"
                   title="Google Maps 3-Pack Deficit"
                 />
                 <div
                   style={{
-                    width: `${Math.max(10, Math.round((omnichannelResult.conversion.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                    width: `${Math.max(8, Math.round((omnichannelResult.conversion.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
                   }}
                   className="bg-rose-500 h-full"
                   title="Website Bounce & Speed Loss"
                 />
                 <div
                   style={{
-                    width: `${Math.max(10, Math.round((omnichannelResult.communications.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                    width: `${Math.max(8, Math.round((omnichannelResult.communications.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
                   }}
                   className="bg-amber-500 h-full"
                   title="Missed Calls & Chat Drops"
                 />
                 <div
                   style={{
-                    width: `${Math.max(10, Math.round((omnichannelResult.booking.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                    width: `${Math.max(8, Math.round((omnichannelResult.booking.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
                   }}
                   className="bg-blue-500 h-full"
                   title="Online Booking Friction"
                 />
                 <div
                   style={{
-                    width: `${Math.max(10, Math.round((omnichannelResult.retention.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                    width: `${Math.max(8, Math.round((omnichannelResult.retention.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
                   }}
                   className="bg-purple-500 h-full"
                   title="Dormant Database Loss"
+                />
+                <div
+                  style={{
+                    width: `${Math.max(8, Math.round((omnichannelResult.reputation.monthlyLeakage / Math.max(1, combinedMonthlyLeaking)) * 100))}%`,
+                  }}
+                  className="bg-amber-400 h-full"
+                  title="Reputation & Review Friction"
                 />
               </div>
               <div className="flex flex-wrap gap-3 pt-1 text-[10px] text-slate-400 font-mono">
@@ -1588,6 +1924,10 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-purple-500" />
                   Retention: {currencySymbol}{omnichannelResult.retention.monthlyLeakage.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  Reviews &amp; Reputation: {currencySymbol}{omnichannelResult.reputation.monthlyLeakage.toLocaleString()}
                 </span>
               </div>
             </div>

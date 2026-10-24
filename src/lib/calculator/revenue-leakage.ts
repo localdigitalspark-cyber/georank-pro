@@ -7,7 +7,8 @@
  * 2. Real-Time Communications (24/7 Web Chatbot, Missed Call SMS text-back, WhatsApp/Social messaging)
  * 3. Self-Service Booking Friction (Online booking calendar, after-hours appointment loss)
  * 4. Retention & Database Reactivation (Automated newsletters, VIP re-booking, loyalty/referral rewards)
- * 5. Comprehensive 5-Point Strategic Growth Roadmap
+ * 5. Reputation Management & Review Velocity (Star rating, review volume vs competitors, response rate)
+ * 6. Comprehensive 5-Point Strategic Growth Roadmap
  */
 
 export interface OmnichannelLeakageFactors {
@@ -30,6 +31,14 @@ export interface OmnichannelLeakageFactors {
   pastCustomerListSize: number;      // e.g. 300 past customers
   hasEmailNewsletterOrOffers: boolean; // If false: Missed 2-4 repeat/service jobs per month
   hasRewardsReferralProgram: boolean;  // If false: Zero word-of-mouth automation
+
+  // 5. Reputation Management & Review Velocity
+  totalReviews: number;              // e.g. 14 reviews
+  avgStarRating: number;             // e.g. 4.1
+  reviewVelocityMonthly: number;     // e.g. 0.5 reviews/month
+  responseRatePercent: number;       // e.g. 15% responded to
+  monitorsMultiPlatform: boolean;    // Google, Facebook, Trustpilot/Checkatrade
+  competitorAvgReviews?: number;     // e.g. 180 (top 3 pack competitor review count)
 }
 
 export interface OmnichannelLeakageResult {
@@ -86,6 +95,41 @@ export interface OmnichannelLeakageResult {
     remedy: string;
   };
 
+  // 5. Reputation, Review Velocity & Response Engine Pillar
+  reputation: {
+    hasIssue: boolean;
+    totalReviews: number;
+    avgStarRating: number;
+    reviewVelocityMonthly: number;
+    responseRatePercent: number;
+    monitorsMultiPlatform: boolean;
+    isSub4Point5: boolean;
+    isLowReviewCount: boolean;
+    isLowVelocity: boolean;
+    isLowResponseRate: boolean;
+    isSinglePlatform: boolean;
+    penaltyPercent: number;
+    missedClicksMonthly: number;
+    lostJobsMonthly: number;
+    monthlyLeakage: number;
+    annualLeakage: number;
+    statusBadge: string;
+    impactDescription: string;
+    industryStat: string;
+    remedy: string;
+    unrespondedFlag: string;
+    auditedGaps: {
+      velocityGap: string;
+      responseGap: string;
+      crossPlatformGap: string;
+    };
+    projectedOpportunity: {
+      reviewCaptureTarget: string;
+      aiResponderTarget: string;
+      reclaimedRevenueRange: string;
+    };
+  };
+
   // Aggregated Omnichannel Totals
   totals: {
     totalLostJobsMonthly: number;
@@ -94,7 +138,7 @@ export interface OmnichannelLeakageResult {
     operationalDeficitScore: number; // 0 - 100 score of friction
   };
 
-  // 5. Strategic Growth Roadmap
+  // Strategic Growth Roadmap
   roadmapSteps: {
     stepNumber: number;
     pillar: string;
@@ -126,6 +170,14 @@ export const DEFAULT_LEAKAGE_FACTORS: OmnichannelLeakageFactors = {
   pastCustomerListSize: 380,
   hasEmailNewsletterOrOffers: false,
   hasRewardsReferralProgram: false,
+
+  // 5. Reputation & Review Velocity Defaults
+  totalReviews: 14,
+  avgStarRating: 4.1,
+  reviewVelocityMonthly: 0.5,
+  responseRatePercent: 15,
+  monitorsMultiPlatform: false,
+  competitorAvgReviews: 180,
 };
 
 /**
@@ -273,26 +325,132 @@ export function calculateOmnichannelRevenueLeakage(
   };
 
   // -------------------------------------------------------------------------
+  // 5. REPUTATION MANAGEMENT, REVIEW VELOCITY & REVIEW RESPONSE LEAKAGE
+  // -------------------------------------------------------------------------
+  // Mathematical Revenue Impact Modeling:
+  // "Sub-4.5 Star & Low Velocity Friction":
+  // If star rating is < 4.5 or review count is < 50% of the top 3 pack competitor:
+  // Apply a 15–25% penalty on local pack click-through rate (CTR).
+  // Projected loss: [Missed Clicks] × [Close Rate %] × [Avg Ticket Value].
+  // "Unresponded Review Conversion Drop":
+  // If response rate is < 75%:
+  // Flag: "Prospects viewing profile assume customer service is inactive; algorithmic prominence score penalized."
+
+  const competitorReviews = factors.competitorAvgReviews || 180;
+  const isSub4Point5 = factors.avgStarRating < 4.5;
+  const isLowReviewCount = factors.totalReviews < (competitorReviews * 0.5);
+  const isLowVelocity = factors.reviewVelocityMonthly < 2.0;
+  const isLowResponseRate = factors.responseRatePercent < 75;
+  const isSinglePlatform = !factors.monitorsMultiPlatform;
+
+  const hasReputationIssue =
+    isSub4Point5 || isLowReviewCount || isLowVelocity || isLowResponseRate || isSinglePlatform;
+
+  // Determine penalty rate (15% to 25%)
+  let penaltyPercent = 0;
+  if (isSub4Point5 && (isLowReviewCount || isLowVelocity)) {
+    penaltyPercent = 25;
+  } else if (isSub4Point5) {
+    penaltyPercent = 20;
+  } else if (isLowReviewCount || isLowVelocity) {
+    penaltyPercent = 15;
+  }
+
+  if (isLowResponseRate) {
+    if (penaltyPercent > 0) {
+      penaltyPercent = Math.min(25, penaltyPercent + 3);
+    } else {
+      penaltyPercent = 15;
+    }
+  }
+
+  // Baseline local pack search interactions
+  const baselineLocalPackClicks = Math.max(20, Math.round(visitors * 0.12));
+  const repMissedClicks = penaltyPercent > 0
+    ? Math.max(3, Math.round(baselineLocalPackClicks * (penaltyPercent / 100)))
+    : 0;
+  const repLostJobs = penaltyPercent > 0
+    ? Math.max(1, Math.round(repMissedClicks * closeRatio))
+    : 0;
+  const repMonthlyLeak = repLostJobs * ticket;
+  const repAnnualLeak = repMonthlyLeak * 12;
+
+  const reputation = {
+    hasIssue: hasReputationIssue,
+    totalReviews: factors.totalReviews,
+    avgStarRating: factors.avgStarRating,
+    reviewVelocityMonthly: factors.reviewVelocityMonthly,
+    responseRatePercent: factors.responseRatePercent,
+    monitorsMultiPlatform: factors.monitorsMultiPlatform,
+    isSub4Point5,
+    isLowReviewCount,
+    isLowVelocity,
+    isLowResponseRate,
+    isSinglePlatform,
+    penaltyPercent,
+    missedClicksMonthly: repMissedClicks,
+    lostJobsMonthly: repLostJobs,
+    monthlyLeakage: repMonthlyLeak,
+    annualLeakage: repAnnualLeak,
+    statusBadge: hasReputationIssue ? '[ ⚠️ Conversion Friction: High ]' : '[ ✓ 5-Star Reputation Engine ]',
+    impactDescription:
+      isSub4Point5 || isLowReviewCount
+        ? `Star rating (${factors.avgStarRating.toFixed(1)}★) or review volume (${factors.totalReviews}) trails top-3 local pack competitors (${competitorReviews}+ reviews). Searchers click rivals with higher social proof.`
+        : 'Reputation and review volume are strong, but consistent new reviews and 100% owner response rate protect your local 3-pack prominence.',
+    industryStat:
+      '87% of consumers will not consider a local business with under a 4.5-star rating or fewer than 50 verified reviews (BrightLocal Consumer Survey).',
+    remedy:
+      'Automate post-job SMS review requests to capture 5–10 new 5-star reviews every month. Deploy AI review responder for 100% instant responses across Google and Facebook to maximize profile prominence.',
+    unrespondedFlag:
+      factors.responseRatePercent < 75
+        ? 'Prospects viewing profile assume customer service is inactive; algorithmic prominence score penalized.'
+        : 'Active owner responses protect profile prominence and signal high attentiveness to new prospects.',
+    auditedGaps: {
+      velocityGap:
+        factors.reviewVelocityMonthly < 2.0
+          ? `Competitors are adding 4–8 verified reviews/month while this business averages <1 (${factors.reviewVelocityMonthly.toFixed(1)}/mo).`
+          : `Healthy review velocity at ${factors.reviewVelocityMonthly.toFixed(1)} new reviews/month.`,
+      responseGap:
+        factors.responseRatePercent < 75
+          ? `${factors.responseRatePercent}% response rate: 0% of 5-star reviews thanked; negative reviews left without owner reconciliation.`
+          : `Strong ${factors.responseRatePercent}% response rate maintained across customer reviews.`,
+      crossPlatformGap: !factors.monitorsMultiPlatform
+        ? 'Zero automated review requests across Facebook or industry review portals.'
+        : 'Multi-platform review monitoring and cross-syndication active.',
+    },
+    projectedOpportunity: {
+      reviewCaptureTarget: 'Automate post-job SMS review requests to capture 5–10 new 5-star reviews every month.',
+      aiResponderTarget: 'Deploy AI review responder for 100% instant responses across Google and Facebook to maximize profile prominence.',
+      reclaimedRevenueRange: 'Reclaim estimated £1,400 – £3,200/mo in lost high-intent conversion volume.',
+    },
+  };
+
+  // -------------------------------------------------------------------------
   // AGGREGATED TOTALS
   // -------------------------------------------------------------------------
   const totalLostJobsMonthly =
-    convLostJobs + commsTotalLostJobs + bookingLostJobs + retentionTotalLostJobs;
+    convLostJobs + commsTotalLostJobs + bookingLostJobs + retentionTotalLostJobs + repLostJobs;
   const totalMonthlyLeakage = totalLostJobsMonthly * ticket;
   const totalAnnualLeakage = totalMonthlyLeakage * 12;
 
   // Operational Deficit Score (0 - 100, where 100 = maximum leakage)
   let missingPoints = 0;
-  if (!factors.hasMobileFastSite) missingPoints += 25;
-  if (!factors.hasWebsiteChatbot) missingPoints += 15;
-  if (!factors.hasMissedCallSmsTextback) missingPoints += 20;
-  if (!factors.hasWhatsAppOrMessenger) missingPoints += 10;
-  if (!factors.hasOnlineBookingCalendar) missingPoints += 15;
+  if (!factors.hasMobileFastSite) missingPoints += 20;
+  if (!factors.hasWebsiteChatbot) missingPoints += 10;
+  if (!factors.hasMissedCallSmsTextback) missingPoints += 15;
+  if (!factors.hasWhatsAppOrMessenger) missingPoints += 5;
+  if (!factors.hasOnlineBookingCalendar) missingPoints += 10;
   if (!factors.hasEmailNewsletterOrOffers) missingPoints += 10;
   if (!factors.hasRewardsReferralProgram) missingPoints += 5;
+
+  // Reputation points (up to 25 points)
+  if (isSub4Point5) missingPoints += 10;
+  if (isLowReviewCount || isLowVelocity) missingPoints += 10;
+  if (isLowResponseRate) missingPoints += 5;
   const operationalDeficitScore = Math.min(100, missingPoints);
 
   // -------------------------------------------------------------------------
-  // 5. STRATEGIC GROWTH ROADMAP
+  // 6. STRATEGIC GROWTH ROADMAP
   // -------------------------------------------------------------------------
   const roadmapSteps = [
     {
@@ -307,22 +465,22 @@ export function calculateOmnichannelRevenueLeakage(
     },
     {
       stepNumber: 2,
-      pillar: 'Website Conversion',
-      title: 'Launch High-Speed Mobile Landing Pages & Direct Click-to-Call CTAs',
+      pillar: 'Reputation & Reviews',
+      title: 'Automate Post-Job SMS Review Capture & 100% AI Review Response Engine',
       timeframe: 'Days 7–14',
-      monthlyRecoveryEst: convMonthlyLeak,
+      monthlyRecoveryEst: repMonthlyLeak || Math.round(ticket * 4),
       keyDeliverable:
-        'Cuts mobile bounce rate in half with sub-second page loads, prominent dispatch phone numbers, and local trust badges.',
+        'Automates post-job SMS review requests to capture 5–10 new 5-star reviews every month. Deploys AI review responder for 100% instant responses across Google and Facebook.',
       priority: 'Immediate (Week 1-2)' as const,
     },
     {
       stepNumber: 3,
-      pillar: 'Self-Service Booking',
-      title: 'Embed Frictionless Online Appointment Booking Calendar',
+      pillar: 'Website Conversion & Booking',
+      title: 'Launch Fast Mobile Landing Pages & Direct Online Booking Calendar',
       timeframe: 'Days 14–21',
-      monthlyRecoveryEst: bookingMonthlyLeak,
+      monthlyRecoveryEst: convMonthlyLeak + bookingMonthlyLeak,
       keyDeliverable:
-        'Enables customers to book service calls 24/7 with zero phone friction. Syncs directly to your technician dispatch calendar.',
+        'Cuts mobile bounce rate in half with sub-second page loads, prominent dispatch CTAs, and frictionless 24/7 appointment self-booking.',
       priority: 'Core (Month 1)' as const,
     },
     {
@@ -353,6 +511,7 @@ export function calculateOmnichannelRevenueLeakage(
     communications,
     booking,
     retention,
+    reputation,
     totals: {
       totalLostJobsMonthly,
       totalMonthlyLeakage,
