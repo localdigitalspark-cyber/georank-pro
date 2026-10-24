@@ -8,6 +8,7 @@
  */
 
 import JSZip from 'jszip';
+import { extractLocality, sanitizeKeyword } from '../../server/services/gemini-content.ts';
 
 export type PageType =
   | 'Home'
@@ -73,7 +74,7 @@ export function resolveSchemaType(category: string): string {
  * Derives neighborhood list from city string to ground local E-E-A-T relevance.
  */
 export function getLocalNeighborhoods(cityStr: string): string[] {
-  const cleanCity = cityStr.split(',')[0].trim();
+  const cleanCity = extractLocality(cityStr);
   if (cleanCity.toLowerCase().includes('austin')) {
     return [
       'Downtown Austin',
@@ -100,6 +101,18 @@ export function getLocalNeighborhoods(cityStr: string): string[] {
       'Romsey Metro Boundary',
     ];
   }
+  if (cleanCity.toLowerCase().includes('brentwood')) {
+    return [
+      'Brentwood High Street',
+      'Shenfield & Hutton',
+      'Ingatestone Village',
+      'Warley & Great Warley',
+      'Pilgrims Hatch',
+      'South Weald',
+      'Herongate & Ingrave',
+      'West Horndon',
+    ];
+  }
   return [
     `Downtown ${cleanCity}`,
     `North ${cleanCity}`,
@@ -122,9 +135,9 @@ export function generateLocalBusinessSchema(
   const schemaType = resolveSchemaType(business.category);
   const domain = business.domain || `${business.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
   const url = `https://${domain}${page.slug === '/' ? '' : page.slug}`;
+  const cityName = extractLocality(business.city || business.address || 'Austin');
   const cityParts = (business.city || 'Austin, TX').split(',');
-  const cityName = cityParts[0]?.trim() || 'Austin';
-  const stateCode = cityParts[1]?.trim() || 'TX';
+  const stateCode = cityParts.length > 1 ? cityParts[1].trim() : 'TX';
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -232,13 +245,13 @@ export function generatePageHtml(
   allPages: PageItem[] = []
 ): string {
   const schema = generateLocalBusinessSchema(business, page);
+  const cityName = extractLocality(business.city || business.address || 'Austin');
   const cityParts = (business.city || 'Austin, TX').split(',');
-  const cityName = cityParts[0]?.trim() || 'Austin';
-  const stateCode = cityParts[1]?.trim() || 'TX';
+  const stateCode = cityParts.length > 1 ? cityParts[1].trim() : 'TX';
   const phone = business.phone || '(512) 555-0199';
   const lat = business.lat ?? 30.2672;
   const lng = business.lng ?? -97.7431;
-  const primaryKw = page.keywords[0] || `${business.category} in ${cityName}`;
+  const primaryKw = sanitizeKeyword(page.keywords[0] || `${business.category} in ${cityName}`);
   const neighborhoods = getLocalNeighborhoods(business.city);
 
   const faqs = [

@@ -89,8 +89,10 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
   if (!isOpen) return null;
 
   const totalPins = gridSize * gridSize;
-  const creditCost = totalPins;
-  const hasEnoughCredits = credits >= creditCost;
+  const isLive = scanMode === 'live';
+  const effectiveCost = isLive ? totalPins : 0;
+  const balanceAfter = credits - effectiveCost;
+  const hasEnoughCredits = credits >= effectiveCost;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,58 +261,83 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
             />
           </div>
 
-          {/* Scan Engine Toggle */}
-          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs">
+          {/* Scan Engine Mode Selector */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5 text-xs">
             <div>
-              <span className="font-semibold text-slate-800 block">
-                SERP Engine Mode
+              <span className="font-bold text-slate-900 block text-xs">
+                SERP Data &amp; Execution Mode
               </span>
               <span className="text-[11px] text-slate-500">
-                {scanMode === 'live'
-                  ? 'Real-time Google Maps live scraper'
-                  : 'Predictive local decay engine'}
+                Select between instant predictive spatial modeling or live Google Maps coordinate scraping
               </span>
             </div>
-            <div className="flex bg-slate-200/70 p-0.5 rounded-xl text-xs">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setScanMode('mock')}
-                className={`px-3 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                   scanMode === 'mock'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600'
+                    ? 'bg-white border-amber-400 ring-2 ring-amber-400/20 shadow-xs'
+                    : 'bg-slate-100/70 border-slate-200 text-slate-600 hover:bg-white/80'
                 }`}
               >
-                Mock
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs text-slate-900">Predictive Distance Model</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                    0 Credits
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  High-fidelity centroid falloff projection based on geodesic radius decay.
+                </p>
               </button>
+
               <button
                 type="button"
                 onClick={() => setScanMode('live')}
-                className={`px-3 py-1 rounded-lg font-semibold transition cursor-pointer ${
+                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                   scanMode === 'live'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600'
+                    ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                    : 'bg-slate-100/70 border-slate-200 text-slate-600 hover:bg-white/80'
                 }`}
               >
-                Live
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                    <span>Live Google Maps</span>
+                    {hasDataForSeoCreds && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    )}
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-mono">
+                    {totalPins} Credits
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Real-time DataForSEO coordinate API query with live Google 3-Pack extraction.
+                </p>
               </button>
             </div>
           </div>
 
-          {/* Credit Cost Box */}
-          <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-2 text-emerald-800">
-              <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+          {/* Explicit Pre-Run Credit Cost Summary */}
+          <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-start sm:items-center space-x-2.5 text-emerald-900">
+              <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600 mt-0.5 sm:mt-0 shrink-0" />
               <div>
-                <span className="font-semibold block">Scan Cost: {creditCost} credits</span>
-                <span className="text-[11px] text-emerald-600">
-                  {totalPins} coordinate pins • Balance: {credits} credits
+                <span className="font-bold block text-slate-900">
+                  Grid: {gridSize} × {gridSize} ({totalPins} Nodes) | Cost: {effectiveCost} SERP Credits | Balance After: {balanceAfter} Credits
+                </span>
+                <span className="text-[11px] text-emerald-700">
+                  {isLive
+                    ? `Consumes ${totalPins} live DataForSEO query units (${totalPins} real coordinate lookups).`
+                    : 'Simulation run does not consume any of your monthly API credits.'}
                 </span>
               </div>
             </div>
             {!hasEnoughCredits && (
-              <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                Low Balance
+              <span className="text-[10px] text-rose-700 font-bold bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-300 self-start sm:self-auto shrink-0">
+                Insufficient Credits
               </span>
             )}
           </div>

@@ -1,10 +1,13 @@
 /**
- * GeoRank Pro / ProfitMaps AI - Keyword Discovery & Traffic Engine
+ * GeoRank Pro - Keyword Discovery & Traffic Engine
  * Path: /src/lib/keywords/keyword-discovery.ts
  *
  * Provides real-time keyword intelligence, search volume, CPC, and intent metrics
  * powered by Gemini AI with deterministic high-fidelity trade fallbacks.
  */
+
+import { detectLocaleFromBusiness } from '../../config/brand.ts';
+import { sanitizeKeyword } from '../../server/services/gemini-content.ts';
 
 export interface DiscoveredKeyword {
   keyword: string;
@@ -605,6 +608,19 @@ export function generateDeterministicKeywordDiscovery(
     ];
   }
 
+  // Detect regional currency based on business profile
+  const locale = detectLocaleFromBusiness({ city, address: business });
+  const currSym = locale.currencySymbol;
+
+  // Apply strict sanitization:
+  // 1. Strip duplicate keyword tokens (e.g. "Emergency Emergency Plumber" -> "Emergency Plumber")
+  // 2. Unify currency symbol to match business region (£ for UK, $ for US)
+  keywords = keywords.map((k) => ({
+    ...k,
+    keyword: sanitizeKeyword(k.keyword),
+    cpc: k.cpc.replace(/[£$]/g, currSym),
+  }));
+
   // Calculate aggregates
   const totalMonthlyVolume = keywords.reduce((sum, k) => sum + k.monthlySearchVolume, 0);
   const estimatedClicks = Math.round(totalMonthlyVolume * 0.32);
@@ -617,8 +633,7 @@ export function generateDeterministicKeywordDiscovery(
     numericCpcs.length > 0
       ? numericCpcs.reduce((a, b) => a + b, 0) / numericCpcs.length
       : 3.2;
-  const currencySymbol = keywords[0]?.cpc.startsWith('$') ? '$' : '£';
-  const averageCpc = `${currencySymbol}${avgNumericCpc.toFixed(2)}`;
+  const averageCpc = `${currSym}${avgNumericCpc.toFixed(2)}`;
 
   return {
     targetBusiness: business,

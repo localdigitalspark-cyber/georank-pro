@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Global responsive viewport containment */
+html, body, #root {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 /* 
  * White-Label PDF Export & Print Styling 
  * Ensures crisp high-fidelity client reports with background colors and page breaks

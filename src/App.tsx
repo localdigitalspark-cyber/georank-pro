@@ -42,25 +42,27 @@ export default function App() {
 
   return (
     <BrandingProvider>
-      {isReportRoute ? (
-        <ReportPage
-          scanId={scanId}
-          onBackToDashboard={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentPath('/');
-          }}
-        />
-      ) : isPreviewRoute ? (
-        <PreviewPage
-          businessSlug={businessSlug}
-          onBackToDashboard={() => {
-            window.history.pushState({}, '', '/');
-            setCurrentPath('/');
-          }}
-        />
-      ) : (
-        <DashboardPage />
-      )}
+      <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50 text-slate-800">
+        {isReportRoute ? (
+          <ReportPage
+            scanId={scanId}
+            onBackToDashboard={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+            }}
+          />
+        ) : isPreviewRoute ? (
+          <PreviewPage
+            businessSlug={businessSlug}
+            onBackToDashboard={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentPath('/');
+            }}
+          />
+        ) : (
+          <DashboardPage />
+        )}
+      </div>
     </BrandingProvider>
   );
 }

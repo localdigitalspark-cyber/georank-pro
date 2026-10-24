@@ -7,6 +7,8 @@
  */
 
 import React, { useState } from 'react';
+import type { GridScanSummary } from '../../lib/serp/adapter.ts';
+import { useActiveScanMetrics } from '../../lib/hooks/useActiveScanMetrics.ts';
 import {
   Building2,
   MapPin,
@@ -49,6 +51,7 @@ export interface BusinessHeaderProps {
   onDeleteBusiness?: () => void;
   totalKeywords?: number;
   isScanning?: boolean;
+  scanSummary?: GridScanSummary | null;
 }
 
 export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
@@ -63,8 +66,10 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
   onDeleteBusiness,
   totalKeywords = 1,
   isScanning = false,
+  scanSummary,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const metrics = useActiveScanMetrics(scanSummary || null, category, businessName);
   const tabs: { id: BusinessSubTab; label: string; count?: number; isAi?: boolean }[] = [
     { id: 'keywords', label: 'Keywords', count: totalKeywords },
     { id: 'todo', label: 'To-do', count: 4 },
@@ -98,7 +103,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
           </div>
 
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 {businessName}
               </h1>
@@ -106,15 +111,25 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
                 <Tag className="w-3 h-3 mr-1 text-slate-600" />
                 {category}
               </span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${metrics.operationalBadge.pillClass}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${metrics.operationalBadge.dotClass}`} />
+                <span>{metrics.operationalBadge.label}</span>
+              </span>
             </div>
 
-            <div className="flex items-center space-x-2 mt-1 text-xs text-slate-600">
+            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-600">
               <span className="flex items-center">
-                <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                {address}
+                <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
+                <span className="truncate max-w-[200px] sm:max-w-xs">{address}</span>
               </span>
               <span>•</span>
-              <span className="text-emerald-700 font-medium">Verified Centroid</span>
+              <span className="font-semibold text-slate-700">
+                Avg Rank: <strong className="text-rose-600">{metrics.formattedRank}</strong>
+              </span>
+              <span>•</span>
+              <span className="font-semibold text-slate-700">
+                Top 3: <strong className="text-emerald-600">{metrics.formattedTop3}</strong>
+              </span>
             </div>
           </div>
         </div>

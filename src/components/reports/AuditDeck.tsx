@@ -21,6 +21,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { LocalSeoAuditOutput } from '../../lib/ai/audit-generator.ts';
 import type { GridScanSummary } from '../../lib/serp/adapter.ts';
 import { useBranding } from '../../lib/context/BrandingContext.tsx';
+import { useActiveScanMetrics } from '../../lib/hooks/useActiveScanMetrics.ts';
+import { detectLocaleFromBusiness, formatCurrency } from '../../config/brand.ts';
 import {
   generateDeterministicKeywordDiscovery,
   type DiscoveredKeyword,
@@ -45,6 +47,7 @@ import {
   Percent,
   Calculator,
   ArrowUpRight,
+  Info,
 } from 'lucide-react';
 
 export interface AuditDeckProps {
@@ -122,7 +125,7 @@ const DEFAULT_SCAN_SUMMARY: GridScanSummary = {
   unrankedCount: 0,
   dominantCompetitors: [
     {
-      name: 'Apex Premier Solutions',
+      name: 'Premier Regional Solutions',
       avgRank: 2.1,
       top3SharePercent: 64,
       rating: 4.9,
@@ -162,6 +165,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [scenario, setScenario] = useState<'conservative' | 'expected' | 'leader'>('expected');
   const [avgTicketValue, setAvgTicketValue] = useState<number>(450);
   const [closeRate, setCloseRate] = useState<number>(30); // 30% default
+  const [showMethodology, setShowMethodology] = useState<boolean>(false);
 
   // Defensive merge with fallback defaults
   const safeAudit: LocalSeoAuditOutput = {
@@ -243,6 +247,19 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       });
   }, [safeSummary.target.businessName, safeSummary.keyword, targetCity, propDiscoveredKeywords]);
 
+  const activeMetrics = useActiveScanMetrics(safeSummary, safeSummary.keyword, safeSummary.target?.businessName);
+
+  const businessLocale = useMemo(() => {
+    return detectLocaleFromBusiness({
+      address: (safeSummary.target as { address?: string })?.address,
+      city: targetCity,
+      lat: safeSummary.center?.lat,
+      lng: safeSummary.center?.lng,
+    });
+  }, [safeSummary.target, targetCity, safeSummary.center?.lat, safeSummary.center?.lng]);
+
+  const currencySymbol = businessLocale.currencySymbol;
+
   // Compute Keyword Traffic & Commercial Opportunity Callout Metrics
   const totalUntappedMonthlyVolume = useMemo(() => {
     return displayedKeywords.reduce((sum, k) => sum + k.monthlySearchVolume, 0);
@@ -251,23 +268,6 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const estimatedInboundClicksMonthly = useMemo(() => {
     return Math.round(totalUntappedMonthlyVolume * 0.32);
   }, [totalUntappedMonthlyVolume]);
-
-  const currencySymbol = useMemo(() => {
-    if (displayedKeywords[0]?.cpc?.startsWith('£')) return '£';
-    const c = targetCity.toLowerCase();
-    if (
-      c.includes('alton') ||
-      c.includes('london') ||
-      c.includes('brentwood') ||
-      c.includes('southampton') ||
-      c.includes('uk') ||
-      c.includes('hampshire') ||
-      c.includes('essex')
-    ) {
-      return '£';
-    }
-    return '$';
-  }, [displayedKeywords, targetCity]);
 
   const { averageCpcFormatted, annualTrafficValue } = useMemo(() => {
     const numericCpcs = displayedKeywords
@@ -385,7 +385,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   }, [coreKeywordsOpportunity]);
 
   // Competitor Names for Callout Banner & Fix Cards
-  const topCompetitor1 = safeSummary.dominantCompetitors?.[0]?.name || 'Apex Premier Solutions';
+  const topCompetitor1 = safeSummary.dominantCompetitors?.[0]?.name || 'Premier Regional Solutions';
   const topCompetitor2 = safeSummary.dominantCompetitors?.[1]?.name || 'Capital City Express Masters';
   const comp1Reviews = safeSummary.dominantCompetitors?.[0]?.reviews ?? 280;
 
@@ -394,7 +394,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Top Action Bar (Hidden in Print) */}
       <div className="print:hidden bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -406,9 +406,15 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               Executive Local SEO Audit &amp; Revenue Leak Report
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Prepared for <strong className="text-slate-800">{safeSummary.target.businessName}</strong> • Verified Google Maps 3-Pack Proximity Analysis.
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-xs text-slate-500">
+              Prepared for <strong className="text-slate-800">{safeSummary.target.businessName}</strong>
+            </span>
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${activeMetrics.operationalBadge.pillClass}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${activeMetrics.operationalBadge.dotClass}`} />
+              <span>{activeMetrics.operationalBadge.label}</span>
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -434,12 +440,18 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       </div>
 
       {/* Main Pitch Deck Container (Clean Light Theme for Screen & Print) */}
-      <div className="bg-white print:p-6 p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 text-slate-800">
+      <div className="bg-white print:p-6 p-4 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 text-slate-800 w-full max-w-full overflow-x-hidden">
         {/* Header Metadata Section */}
         <div className="border-b border-slate-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="text-[11px] font-mono uppercase tracking-wider text-emerald-700 font-bold">
-              Confidential Local SEO Audit &amp; Market Share Defense
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-700 font-bold">
+                Confidential Local SEO Audit &amp; Market Share Defense
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border ${activeMetrics.operationalBadge.pillClass}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${activeMetrics.operationalBadge.dotClass}`} />
+                <span>{activeMetrics.operationalBadge.label}</span>
+              </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1 tracking-tight">
               {safeSummary.target.businessName || 'Target Business'}
@@ -458,7 +470,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               />
             ) : null}
             <span className="text-xs font-bold text-slate-900 block font-mono">
-              Prepared by: {branding.agencyName || 'GeoRank Local Agency'}
+              Prepared by: {branding.agencyName || 'GeoRank Growth Agency'}
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
               {branding.contactEmail} {branding.phone ? `• ${branding.phone}` : ''} • {new Date(safeSummary.createdAt).toLocaleDateString()}
@@ -577,6 +589,43 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
           </div>
 
+          {/* Methodology & Data Confidence Bar */}
+          <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 text-xs space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <Target className="w-3 h-3 text-blue-600" />
+                  <span>Measured Google Pack Ranks</span>
+                </span>
+                <span className="text-slate-400 text-xs hidden sm:inline">•</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Calculator className="w-3 h-3 text-emerald-600" />
+                  <span>Projected Revenue Impact</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMethodology(!showMethodology)}
+                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer transition"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-500" />
+                <span>{showMethodology ? 'Hide Methodology' : 'View Calculation Methodology'}</span>
+              </button>
+            </div>
+            {showMethodology && (
+              <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-600 leading-relaxed space-y-1">
+                <p>
+                  <strong className="font-semibold text-slate-800">Calculation Methodology:</strong> [Keyword Search Volume] × [Local 3-Pack Share of Voice (CTR)] × [Target Close Rate] × [Average Customer Ticket Value]. Assumptions can be customized using the sliders above.
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  • <em>Measured Google Pack Ranks:</em> Hard spatial coordinates queried directly across the geo-grid.
+                  <br />
+                  • <em>Projected Revenue Impact:</em> Calibrated commercial model based on local click-to-call conversion benchmarks.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* 3 Summary Result KPI Badges */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Badge 1: Monthly Revenue Leaking */}
@@ -636,15 +685,15 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               </span>
             </div>
 
-            <div className="overflow-x-auto print:overflow-visible">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 print:overflow-visible">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 px-3.5">Target Service Keyword</th>
-                    <th className="py-2.5 px-3 text-right">Monthly Searches</th>
-                    <th className="py-2.5 px-3">Current Local Pack Rank</th>
-                    <th className="py-2.5 px-3 text-right">Est. Missed Calls / Mo</th>
-                    <th className="py-2.5 px-3.5 text-right">Est. Monthly Revenue Impact</th>
+                    <th className="py-2.5 px-3.5 whitespace-normal break-words sm:whitespace-nowrap">Target Service Keyword</th>
+                    <th className="py-2.5 px-3 text-right whitespace-normal break-words sm:whitespace-nowrap">Monthly Searches</th>
+                    <th className="py-2.5 px-3 whitespace-normal break-words sm:whitespace-nowrap">Current Local Pack Rank</th>
+                    <th className="py-2.5 px-3 text-right whitespace-normal break-words sm:whitespace-nowrap">Est. Missed Calls / Mo</th>
+                    <th className="py-2.5 px-3.5 text-right whitespace-normal break-words sm:whitespace-nowrap">Est. Monthly Revenue Impact</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-sans">
@@ -725,7 +774,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               Average Grid Rank
             </span>
             <span className="text-2xl font-black font-mono text-rose-600 mt-0.5 block">
-              #{Number(safeSummary.averageRank ?? 11.4).toFixed(1)}
+              {activeMetrics.formattedRank}
             </span>
             <span className="text-[10px] text-slate-400">Across {totalNodes} coordinates</span>
           </div>
@@ -735,7 +784,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               3-Pack Presence
             </span>
             <span className="text-2xl font-black font-mono text-emerald-700 mt-0.5 block">
-              {Number(safeSummary.top3Percentage ?? 16).toFixed(1)}%
+              {activeMetrics.formattedTop3}
             </span>
             <span className="text-[10px] text-emerald-600">{top3Count} of {totalNodes} pins in top 3</span>
           </div>
@@ -745,7 +794,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
               Dropoff Red Zone
             </span>
             <span className="text-2xl font-black font-mono text-rose-700 mt-0.5 block">
-              {Number(redZonePercentage).toFixed(1)}%
+              {activeMetrics.redZonePercentage.toFixed(1)}%
             </span>
             <span className="text-[10px] text-rose-600">{redZoneCount} of {totalNodes} pins in red zone (rank 11+)</span>
           </div>
@@ -880,15 +929,15 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
           {/* Interactive Keywords Table */}
           <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs print:overflow-visible">
-            <div className="overflow-x-auto print:overflow-visible">
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 print:overflow-visible">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-100/90 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 px-3.5">Target Search Query</th>
-                    <th className="py-2.5 px-3 text-right">Monthly Searches</th>
-                    <th className="py-2.5 px-3 text-right">Est. CPC</th>
-                    <th className="py-2.5 px-3">Search Intent</th>
-                    <th className="py-2.5 px-3.5">Current Local Pack Status</th>
+                    <th className="py-2.5 px-3.5 whitespace-normal break-words sm:whitespace-nowrap">Target Search Query</th>
+                    <th className="py-2.5 px-3 text-right whitespace-normal break-words sm:whitespace-nowrap">Monthly Searches</th>
+                    <th className="py-2.5 px-3 text-right whitespace-normal break-words sm:whitespace-nowrap">Est. CPC</th>
+                    <th className="py-2.5 px-3 whitespace-normal break-words sm:whitespace-nowrap">Search Intent</th>
+                    <th className="py-2.5 px-3.5 whitespace-normal break-words sm:whitespace-nowrap">Current Local Pack Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-sans">

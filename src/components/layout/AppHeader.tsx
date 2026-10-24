@@ -261,26 +261,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6">
+    <header className="h-16 bg-white border-b border-slate-200/80 sticky top-0 z-30 flex items-center justify-between px-3 sm:px-6 w-full max-w-full overflow-hidden">
       {/* Left: Mobile Toggle & Dynamic Breadcrumbs */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 min-w-0 max-w-[130px] sm:max-w-xs">
         {onOpenMobileMenu && (
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+            className="lg:hidden p-1.5 sm:p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer shrink-0"
             aria-label="Open sidebar menu"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
 
-        <nav aria-label="Breadcrumb" className="flex items-center space-x-1.5 text-xs truncate max-w-[200px] sm:max-w-xs">
+        <nav aria-label="Breadcrumb" className="flex items-center space-x-1.5 text-xs truncate min-w-0">
           {renderBreadcrumb()}
         </nav>
       </div>
 
       {/* Center: Global Business & Geocoding Autocomplete Search */}
-      <div className="flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-2 sm:mx-4">
+      <div className="flex-1 min-w-0 max-w-xs sm:max-w-sm md:max-w-md mx-2 sm:mx-4">
         <BusinessSearchInput
           initialBusinessName=""
           onLocationResolved={(loc) => {
@@ -289,12 +289,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           centerLat={centerLat ?? 30.2672}
           centerLng={centerLng ?? -97.7431}
           variant="header"
-          placeholder="Search business or location (e.g. Apex Plumbing, Alton)..."
+          placeholder="Search business or location..."
         />
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
         {/* Mock / Live Scan Mode Toggle */}
         {onToggleScanMode && (
           <div className="hidden md:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">

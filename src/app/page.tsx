@@ -1014,6 +1014,7 @@ export default function DashboardPage() {
             onDeleteBusiness={handleDeleteActiveBusiness}
             totalKeywords={Object.keys(keywordCache).length}
             isScanning={isScanning}
+            scanSummary={scanSummary}
           />
         )}
 
@@ -1480,7 +1481,7 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <footer className="border-t border-slate-200/80 bg-white py-3.5 px-6 text-center text-xs text-slate-500">
-          ProfitMaps AI • Powered by {branding.agencyName || 'GeoRank Engine'} • Google Local Maps Radar Tracker
+          GeoRank Pro • Powered by {branding.agencyName || 'GeoRank Pro'} • Google Local Maps Radar Tracker
         </footer>
       </div>
     </div>

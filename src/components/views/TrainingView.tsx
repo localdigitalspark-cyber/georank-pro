@@ -17,6 +17,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { MasterclassModal } from '../training/MasterclassModal.tsx';
 
 export interface TrainingModule {
   id: string;
@@ -225,96 +226,12 @@ export const TrainingView: React.FC = () => {
         ))}
       </div>
 
-      {/* Lesson Details Modal */}
-      {activeLesson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="w-5 h-5 text-emerald-600" />
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    {activeLesson.title}
-                  </h3>
-                  <span className="text-[11px] text-slate-500">
-                    {activeLesson.category} • {activeLesson.duration}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveLesson(null)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              {/* Simulated Video Placeholder */}
-              <div className="w-full h-48 bg-slate-950 rounded-2xl flex flex-col items-center justify-center text-white relative overflow-hidden group">
-                <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition cursor-pointer">
-                  <Play className="w-5 h-5 fill-current ml-0.5" />
-                </div>
-                <span className="mt-2 text-[11px] text-slate-400 font-mono">
-                  HD Masterclass Video • {activeLesson.duration}
-                </span>
-              </div>
-
-              {/* Key Takeaways */}
-              <div className="space-y-2">
-                <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
-                  Core Implementation Takeaways:
-                </div>
-                <div className="space-y-2">
-                  {activeLesson.takeaways.map((point, i) => (
-                    <div
-                      key={i}
-                      className="p-3 bg-emerald-50/60 border border-emerald-200/80 rounded-xl text-emerald-900 font-medium"
-                    >
-                      {point}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Full Checklist */}
-              <div className="space-y-2">
-                <div className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
-                  Actionable Step-by-Step Curriculum:
-                </div>
-                <div className="space-y-1.5">
-                  {activeLesson.checklist.map((step, i) => (
-                    <div key={i} className="flex items-start space-x-2 text-slate-600">
-                      <span className="w-4 h-4 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                        {i + 1}
-                      </span>
-                      <span>{step}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
-              <button
-                onClick={() => {
-                  toggleModuleCompletion(activeLesson.id);
-                  setActiveLesson(null);
-                }}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition cursor-pointer"
-              >
-                Mark Complete &amp; Close
-              </button>
-              <button
-                onClick={() => setActiveLesson(null)}
-                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Masterclass Details & SOP Modal */}
+      <MasterclassModal
+        module={activeLesson}
+        onClose={() => setActiveLesson(null)}
+        onToggleComplete={toggleModuleCompletion}
+      />
     </div>
   );
 };

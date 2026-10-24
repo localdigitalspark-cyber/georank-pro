@@ -9,6 +9,8 @@
  * 3. Executive Priority Fixes (Relevance, Trust, Consistency)
  */
 
+import { extractLocality, sanitizeKeyword } from './gemini-content.ts';
+
 export interface GbpFixItem {
   id: string;
   category: 'reviews' | 'photos' | 'citations' | 'responsiveness';
@@ -80,8 +82,8 @@ export interface AnalyzeRankingFixesInput {
 
 export function analyzeRankingFixes(input: AnalyzeRankingFixesInput): RankingFixesReport {
   const businessName = input.businessName || 'Local Business';
-  const category = input.category || 'Local Service';
-  const city = input.city || 'Local Metro';
+  const category = sanitizeKeyword(input.category || 'Local Service');
+  const city = extractLocality(input.city || 'Local Metro');
   const targetReviews = input.reviews ?? 38;
   const targetRating = input.rating ?? 4.7;
   const targetPhotos = input.photosCount ?? 28;
@@ -91,9 +93,9 @@ export function analyzeRankingFixes(input: AnalyzeRankingFixesInput): RankingFix
   const competitors = (input.competitors && input.competitors.length > 0)
     ? input.competitors
     : [
-        { name: 'Apex Elite ' + category, reviews: 142, rating: 4.9 },
-        { name: 'Metro Direct ' + category, reviews: 88, rating: 4.8 },
-        { name: 'Citywide Fast ' + category, reviews: 76, rating: 4.7 },
+        { name: 'Metro Elite ' + category, reviews: 142, rating: 4.9 },
+        { name: 'Citywide Direct ' + category, reviews: 88, rating: 4.8 },
+        { name: 'Premier Fast ' + category, reviews: 76, rating: 4.7 },
       ];
 
   const compReviewsList = competitors.map((c) => c.reviews || 50).sort((a, b) => a - b);
@@ -199,12 +201,17 @@ export function analyzeRankingFixes(input: AnalyzeRankingFixesInput): RankingFix
 
   // 2. Organic & Content Fixes ("Pages the top businesses publish that you don't")
   const defaultAreas = input.servicedAreas && input.servicedAreas.length > 0
-    ? input.servicedAreas
+    ? input.servicedAreas.map((a) => extractLocality(a))
     : [city, 'Downtown ' + city, 'North ' + city, 'West ' + city];
 
   const defaultKeywords = input.trackedKeywords && input.trackedKeywords.length > 0
-    ? input.trackedKeywords
-    : [category, 'Emergency ' + category, 'Commercial ' + category, 'Affordable ' + category];
+    ? input.trackedKeywords.map((k) => sanitizeKeyword(k))
+    : [
+        category,
+        category.toLowerCase().startsWith('emergency') ? category : 'Emergency ' + category,
+        category.toLowerCase().startsWith('commercial') ? category : 'Commercial ' + category,
+        category.toLowerCase().startsWith('affordable') ? category : 'Affordable ' + category,
+      ].map((k) => sanitizeKeyword(k));
 
   const contentFixes: ContentPageFixItem[] = [];
 

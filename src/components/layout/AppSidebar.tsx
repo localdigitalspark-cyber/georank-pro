@@ -200,7 +200,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 <span>Credits Balance</span>
               </div>
               <span className="font-bold text-slate-900 font-mono">
-                {credits}
+                {(credits * 25).toLocaleString()}
               </span>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -209,11 +209,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 style={{ width: `${Math.min(100, (credits / 100) * 100)}%` }}
               />
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-600">
-              <span>{credits} scans left</span>
+            <div className="mt-1.5 flex items-center justify-between text-[10.5px] text-slate-600 leading-snug">
+              <div>
+                <span className="font-semibold text-slate-700">Credits: {(credits * 25).toLocaleString()} remaining</span>
+                <span className="block text-[10px] text-slate-400 font-mono">Approx. {credits} scans at 25 credits/scan</span>
+              </div>
               <button
                 onClick={onOpenNewScan}
-                className="text-emerald-700 font-semibold hover:text-emerald-800 transition cursor-pointer"
+                className="text-emerald-700 font-semibold hover:text-emerald-800 transition cursor-pointer shrink-0 ml-1.5"
               >
                 + Scan
               </button>

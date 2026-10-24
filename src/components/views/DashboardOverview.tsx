@@ -30,6 +30,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { GridScanSummary } from '../../lib/serp/adapter.ts';
+import { useActiveScanMetrics } from '../../lib/hooks/useActiveScanMetrics.ts';
 import { BusinessSearchInput, type ResolvedLocation } from '../search/BusinessSearchInput.tsx';
 
 export interface DashboardOverviewProps {
@@ -57,36 +58,37 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   centerLng = -97.7431,
 }) => {
   const [activeKeywordPill, setActiveKeywordPill] = useState('Emergency Plumber');
+  const metrics = useActiveScanMetrics(scanSummary, activeKeywordPill, businessName);
 
   const topMetrics = [
     {
       title: '3-Pack Share',
-      value: '28%',
-      subtext: 'of the map in top 3',
+      value: metrics.formattedTop3,
+      subtext: `${metrics.top3Percentage >= 30 ? 'Dominant' : 'Weak'} centroid coverage`,
       color: 'text-emerald-700',
       bg: 'bg-emerald-50 text-emerald-700',
       icon: TrendingUp,
     },
     {
-      title: 'Scans Run',
-      value: '13',
-      subtext: 'Scans in the last 30 days',
+      title: 'Average Rank',
+      value: metrics.formattedRank,
+      subtext: `Across ${metrics.totalNodes} grid nodes`,
       color: 'text-slate-900',
       bg: 'bg-blue-50 text-blue-700',
       icon: ScanLine,
     },
     {
-      title: 'Tracked Keywords',
-      value: '13',
-      subtext: 'Keywords scanned',
+      title: 'Active Keyword',
+      value: metrics.keyword,
+      subtext: 'Currently analyzed',
       color: 'text-slate-900',
       bg: 'bg-amber-50 text-amber-700',
       icon: Tag,
     },
     {
       title: 'Credits',
-      value: `${credits}`,
-      subtext: 'Credits left',
+      value: `${(credits * 25).toLocaleString()}`,
+      subtext: `Approx. ${credits} scans at 25/scan`,
       color: 'text-emerald-700',
       bg: 'bg-emerald-50 text-emerald-700',
       icon: Sparkles,
@@ -164,7 +166,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   ];
 
   const keywordsPills = [
-    { label: 'Emergency Plumber', coverage: '28%', rank: '#4.2' },
+    { label: metrics.keyword, coverage: metrics.formattedTop3, rank: metrics.formattedRank },
     { label: '24/7 Drain Cleaning', coverage: '16%', rank: '#7.1' },
     { label: 'Water Heater Repair', coverage: '36%', rank: '#3.0' },
     { label: 'Pipe Relining Austin', coverage: '8%', rank: '#12.4' },
@@ -232,9 +234,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 {businessName.charAt(0)}
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">{businessName}</h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-slate-900 text-sm">{businessName}</h3>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${metrics.operationalBadge.pillClass}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${metrics.operationalBadge.dotClass}`} />
+                    <span>{metrics.operationalBadge.label}</span>
+                  </span>
+                </div>
                 <span className="text-[11px] text-slate-500">
-                  Downtown Austin Metro Area • 5x5 Grid Monitored
+                  {metrics.keyword} • {metrics.totalNodes} Pins Monitored
                 </span>
               </div>
             </div>
@@ -296,7 +304,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 Local Pack Status
               </span>
               <span className="text-sm font-bold text-emerald-700 block mt-0.5">
-                {scanSummary ? `${scanSummary.top3Percentage}% in-pack` : '28.0% in-pack'}
+                {metrics.formattedTop3} in-pack
               </span>
             </div>
             <div>
@@ -304,7 +312,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 Average SERP Position
               </span>
               <span className="text-sm font-bold text-rose-600 font-mono block mt-0.5">
-                {scanSummary ? `#${scanSummary.averageRank}` : '#4.2'}
+                {metrics.formattedRank}
               </span>
             </div>
           </div>

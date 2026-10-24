@@ -24,11 +24,11 @@ export interface AgencyBranding {
 }
 
 export const DEFAULT_BRANDING: AgencyBranding = {
-  agencyName: 'Apex Local Growth Agency',
-  contactEmail: 'growth@apexlocalagency.com',
+  agencyName: 'GeoRank Growth Agency',
+  contactEmail: 'growth@georankgrowth.com',
   phone: '+1 (555) 329-8472',
-  websiteUrl: 'https://apexlocalgrowth.com',
-  primaryColor: '#4f46e5', // Indigo-600
+  websiteUrl: 'https://georankgrowth.com',
+  primaryColor: '#059669', // Emerald-600
   tagline: 'High-Impact Local SEO & Client Acquisition Systems',
 };
 
