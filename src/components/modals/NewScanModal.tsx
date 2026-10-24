@@ -16,6 +16,9 @@ import {
   Zap,
   Info,
   Layers,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { BusinessSearchInput, type ResolvedLocation } from '../search/BusinessSearchInput.tsx';
 import type { DistanceUnit } from '../../lib/geo/grid-generator.ts';
@@ -71,6 +74,7 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
   const [distanceStep, setDistanceStep] = useState<number>(initialDistanceStep);
   const [unit, setUnit] = useState<DistanceUnit>(initialUnit);
   const [scanMode, setScanMode] = useState<SerpScanMode>(initialScanMode);
+  const [showLiveConfirmation, setShowLiveConfirmation] = useState<boolean>(false);
 
   // Sync state whenever modal is opened
   useEffect(() => {
@@ -83,6 +87,7 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
       setDistanceStep(initialDistanceStep);
       setUnit(initialUnit);
       setScanMode(initialScanMode);
+      setShowLiveConfirmation(false);
     }
   }, [isOpen, initialBusinessName, initialKeyword, initialLat, initialLng]);
 
@@ -94,8 +99,16 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
   const balanceAfter = credits - effectiveCost;
   const hasEnoughCredits = credits >= effectiveCost;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLive) {
+      setShowLiveConfirmation(true);
+      return;
+    }
+    executeConfirmedScan();
+  };
+
+  const executeConfirmedScan = () => {
     onRunScan({
       businessName,
       keyword,
@@ -106,6 +119,7 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
       unit,
       scanMode,
     });
+    setShowLiveConfirmation(false);
     onClose();
   };
 
@@ -118,7 +132,70 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
+        {/* Two-Step Live Confirmation Dialog Overlay */}
+        {showLiveConfirmation && (
+          <div className="absolute inset-0 z-30 bg-white/95 backdrop-blur-sm p-6 flex flex-col justify-between animate-in fade-in zoom-in-95">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                <AlertTriangle className="w-6 h-6 stroke-[2.5]" />
+              </div>
+
+              <div>
+                <h3 className="text-base font-black text-slate-900 tracking-tight">
+                  Confirm Live Google Maps SERP Scan
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  This will consume <strong className="text-slate-900 font-bold">{totalPins} SERP credits</strong> from your balance to query {totalPins} live Google Maps GPS coordinates via DataForSEO. Proceed?
+                </p>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-xs space-y-2 font-mono">
+                <div className="flex justify-between text-slate-600">
+                  <span>Target:</span>
+                  <span className="font-bold text-slate-900 truncate max-w-[200px]">{businessName}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Keyword:</span>
+                  <span className="font-bold text-slate-900">{keyword}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Grid Resolution:</span>
+                  <span className="font-bold text-slate-900">{gridSize} × {gridSize} ({totalPins} Pins)</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2 flex justify-between text-slate-700">
+                  <span>Credit Cost:</span>
+                  <span className="font-bold text-rose-600">-{totalPins} Credits</span>
+                </div>
+                <div className="flex justify-between text-slate-700">
+                  <span>Remaining Balance:</span>
+                  <span className="font-bold text-emerald-700">{balanceAfter} Credits</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-2.5">
+              <button
+                type="button"
+                data-testid="cancel-live-confirmation"
+                onClick={() => setShowLiveConfirmation(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="confirm-live-scan"
+                onClick={executeConfirmedScan}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center space-x-2 cursor-pointer"
+              >
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>Confirm &amp; Run ({totalPins} Credits)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
           <div>
@@ -132,6 +209,8 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close scan modal"
+            data-testid="close-scan-modal"
             className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200/60 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -139,7 +218,15 @@ export const NewScanModal: React.FC<NewScanModalProps> = ({
         </div>
 
         {/* Modal Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form
+          onSubmit={handleFormSubmit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+            }
+          }}
+          className="p-6 space-y-4 overflow-y-auto"
+        >
           {/* Autocomplete & Geo-Resolver */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1.5">

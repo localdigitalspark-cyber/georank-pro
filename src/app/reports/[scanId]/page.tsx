@@ -173,7 +173,7 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 p-4 sm:p-6 lg:p-8 space-y-6 w-full max-w-full overflow-x-hidden">
       {/* Top Client Bar (Hidden in Print) */}
       <div className="print:hidden max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="flex items-center space-x-3">

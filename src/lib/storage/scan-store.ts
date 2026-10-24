@@ -31,6 +31,21 @@ export interface StoredScanRecord {
   scanSummary: GridScanSummary;
   audit: LocalSeoAuditOutput;
   discoveredKeywords?: DiscoveredKeyword[];
+  mode?: 'live' | 'mock';
+  provider?: string;
+  timestamp?: string;
+  checkUrl?: string;
+  rawCompetitors?: any[];
+  auditTrail?: {
+    taskId?: string;
+    provider: string;
+    executedAt: string;
+    checkUrls: string[];
+    totalNodes: number;
+    liveNodesCount: number;
+    centerCoords: { lat: number; lng: number };
+    keyword: string;
+  };
 }
 
 // In-memory cache for ultra-fast lookup & immediate sync across refreshes
@@ -198,6 +213,12 @@ export function saveScan(scanData: {
     },
     audit: scanData.audit,
     discoveredKeywords: scanData.discoveredKeywords,
+    mode: scanData.scanSummary?.mode || 'mock',
+    provider: scanData.scanSummary?.provider || (scanData.scanSummary?.mode === 'live' ? 'DataForSEO (Google Maps Live Advanced)' : 'Geo-Decay Spatial Simulation'),
+    timestamp: scanData.scanSummary?.createdAt || new Date().toISOString(),
+    checkUrl: scanData.scanSummary?.checkUrl,
+    rawCompetitors: scanData.scanSummary?.rawCompetitors,
+    auditTrail: scanData.scanSummary?.auditTrail,
   };
 
   inMemoryScans.set(scanId, record);

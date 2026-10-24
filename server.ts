@@ -862,12 +862,24 @@ app.post('/api/scan', async (req: Request, res: Response) => {
     const keyword = body.keyword || 'Emergency Plumber';
     const mode = body.mode === 'live' ? 'live' : 'mock';
 
+    if (mode === 'live') {
+      const login = (process.env.DATAFORSEO_LOGIN || '').trim();
+      const pass = (process.env.DATAFORSEO_PASSWORD || '').trim();
+      if (!login || !pass) {
+        return res.status(400).json({
+          success: false,
+          error: 'Live SERP API Failed: DATAFORSEO_LOGIN or DATAFORSEO_PASSWORD is not configured on server. Credits were not charged.',
+        });
+      }
+    }
+
     const target = {
       placeId: body.target?.placeId || body.placeId,
       cid: body.target?.cid || body.cid,
       businessName: body.target?.businessName || body.businessName || 'Austin Premier Plumbing',
       domainOrUrl: body.target?.domainOrUrl || body.domainOrUrl || body.website,
       website: body.target?.website || body.website || body.domainOrUrl,
+      phone: body.target?.phone || body.phone,
     };
 
     // 1. Generate coordinate grid
@@ -878,22 +890,29 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       unit,
     });
 
-    // 2. Scan nodes concurrently
+    // 2. Scan nodes in controlled batches of 5 to prevent concurrency rate limits
     const scanId = `scan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const nodePromises = grid.points.map((point) =>
-      scanGridNode(
-        {
-          mode,
-          target,
-          keyword,
-          dataForSeoLogin: process.env.DATAFORSEO_LOGIN,
-          dataForSeoPassword: process.env.DATAFORSEO_PASSWORD,
-        },
-        point
-      )
-    );
+    const nodeResults: any[] = [];
+    const batchSize = 5;
 
-    const nodeResults = await Promise.all(nodePromises);
+    for (let i = 0; i < grid.points.length; i += batchSize) {
+      const chunk = grid.points.slice(i, i + batchSize);
+      const chunkResults = await Promise.all(
+        chunk.map((point) =>
+          scanGridNode(
+            {
+              mode,
+              target,
+              keyword,
+              dataForSeoLogin: process.env.DATAFORSEO_LOGIN,
+              dataForSeoPassword: process.env.DATAFORSEO_PASSWORD,
+            },
+            point
+          )
+        )
+      );
+      nodeResults.push(...chunkResults);
+    }
 
     // 3. Summarize scan
     const summary = summarizeGridScan(
@@ -920,9 +939,10 @@ app.post('/api/scan', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Scan API error:', error);
     if (!res.headersSent) {
-      res.status(500).json({
+      const errMsg = error instanceof Error ? error.message : 'Scan failed';
+      res.status(502).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Scan failed',
+        error: `Live SERP API Failed: ${errMsg}. Credits were not charged.`,
       });
     }
   }

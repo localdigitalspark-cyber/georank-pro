@@ -49,22 +49,29 @@ export async function POST(req: Request) {
       unit,
     });
 
-    // 2. Scan nodes (concurrent batch processing)
+    // 2. Scan nodes (concurrent batch processing in chunks of 5)
     const scanId = `scan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const nodePromises = grid.points.map((point) =>
-      scanGridNode(
-        {
-          mode,
-          target,
-          keyword,
-          dataForSeoLogin: process.env.DATAFORSEO_LOGIN,
-          dataForSeoPassword: process.env.DATAFORSEO_PASSWORD,
-        },
-        point
-      )
-    );
+    const nodeResults: NodeScanOutput[] = [];
+    const batchSize = 5;
 
-    const nodeResults: NodeScanOutput[] = await Promise.all(nodePromises);
+    for (let i = 0; i < grid.points.length; i += batchSize) {
+      const chunk = grid.points.slice(i, i + batchSize);
+      const chunkResults = await Promise.all(
+        chunk.map((point) =>
+          scanGridNode(
+            {
+              mode,
+              target,
+              keyword,
+              dataForSeoLogin: process.env.DATAFORSEO_LOGIN,
+              dataForSeoPassword: process.env.DATAFORSEO_PASSWORD,
+            },
+            point
+          )
+        )
+      );
+      nodeResults.push(...chunkResults);
+    }
 
     // 3. Summarize scan with competitor share metrics
     const summary = summarizeGridScan(

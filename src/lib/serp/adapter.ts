@@ -35,6 +35,8 @@ export interface NodeScanOutput extends PinScanResult {
   distanceFromCenter: number;
   bearingDegrees: number;
   isCenter: boolean;
+  checkUrl?: string;
+  taskId?: string;
 }
 
 export interface GridScanSummary {
@@ -43,6 +45,31 @@ export interface GridScanSummary {
   target: TargetBusinessIdentifier;
   keyword: string;
   mode: SerpScanMode;
+  provider?: string;
+  checkUrl?: string;
+  checkUrls?: string[];
+  taskId?: string;
+  taskIds?: string[];
+  rawCompetitors?: Array<{
+    name: string;
+    rating?: number;
+    reviews?: number;
+    address?: string;
+    place_id?: string;
+    phone?: string;
+    rank?: number;
+    checkUrl?: string;
+  }>;
+  auditTrail?: {
+    taskId?: string;
+    provider: string;
+    executedAt: string;
+    checkUrls: string[];
+    totalNodes: number;
+    liveNodesCount: number;
+    centerCoords: { lat: number; lng: number };
+    keyword: string;
+  };
   gridSize: number;
   distanceStep: number;
   unit: string;
@@ -301,7 +328,8 @@ export async function fetchDataForSeoMapsSerp(
   login?: string,
   password?: string
 ): Promise<SerpLocalItem[]> {
-  return fetchDataForSeoLivePin(lat, lng, keyword, { login, password });
+  const res = await fetchDataForSeoLivePin(lat, lng, keyword, { login, password });
+  return res.items;
 }
 
 /**
@@ -312,22 +340,23 @@ export async function scanGridNode(
   point: GridPoint
 ): Promise<NodeScanOutput> {
   let serpItems: SerpLocalItem[];
+  let nodeCheckUrl: string | undefined;
+  let nodeTaskId: string | undefined;
 
   if (options.mode === 'live') {
-    try {
-      serpItems = await fetchDataForSeoLivePin(
-        point.lat,
-        point.lng,
-        options.keyword,
-        {
-          login: options.dataForSeoLogin,
-          password: options.dataForSeoPassword,
-        }
-      );
-    } catch (err) {
-      console.warn(`DataForSEO call failed at (${point.lat}, ${point.lng}), falling back to mock:`, err);
-      serpItems = generateMockSerpItemsForNode(options.target, point, options.keyword);
-    }
+    // FAIL LOUDLY: Never silently fallback to mock data when user requested Live SERP!
+    const liveResult = await fetchDataForSeoLivePin(
+      point.lat,
+      point.lng,
+      options.keyword,
+      {
+        login: options.dataForSeoLogin,
+        password: options.dataForSeoPassword,
+      }
+    );
+    serpItems = liveResult.items;
+    nodeCheckUrl = liveResult.checkUrl;
+    nodeTaskId = liveResult.taskId;
   } else {
     serpItems = generateMockSerpItemsForNode(options.target, point, options.keyword);
   }
@@ -344,6 +373,8 @@ export async function scanGridNode(
     distanceFromCenter: point.distanceFromCenter,
     bearingDegrees: point.bearingFromCenterDegrees,
     isCenter: point.isCenter,
+    checkUrl: nodeCheckUrl,
+    taskId: nodeTaskId,
   };
 }
 
@@ -409,12 +440,60 @@ export function summarizeGridScan(
     .sort((a, b) => b.top3SharePercent - a.top3SharePercent)
     .slice(0, 4);
 
+  const checkUrls = nodes.map((n) => n.checkUrl).filter(Boolean) as string[];
+  const taskIds = nodes.map((n) => n.taskId).filter(Boolean) as string[];
+  const centerNode = nodes.find((n) => n.isCenter) || nodes[0];
+  const primaryCheckUrl = centerNode?.checkUrl || checkUrls[0];
+  const primaryTaskId = centerNode?.taskId || taskIds[0];
+
+  const rawCompetitorList: Array<{
+    name: string;
+    rating?: number;
+    reviews?: number;
+    address?: string;
+    place_id?: string;
+    phone?: string;
+    rank?: number;
+    checkUrl?: string;
+  }> = [];
+
+  nodes.forEach((n) => {
+    n.topCompetitors.forEach((c) => {
+      rawCompetitorList.push({
+        name: c.name,
+        rating: c.rating,
+        reviews: c.reviews,
+        address: c.address,
+        place_id: c.place_id,
+        phone: c.phone,
+        rank: c.rank_position,
+        checkUrl: n.checkUrl,
+      });
+    });
+  });
+
   return {
     scanId,
     createdAt: new Date().toISOString(),
     target,
     keyword,
     mode,
+    provider: mode === 'live' ? 'DataForSEO (Google Maps Live Advanced)' : 'Geo-Decay Spatial Simulation',
+    checkUrl: primaryCheckUrl,
+    checkUrls,
+    taskId: primaryTaskId,
+    taskIds,
+    rawCompetitors: rawCompetitorList,
+    auditTrail: {
+      taskId: primaryTaskId,
+      provider: mode === 'live' ? 'DataForSEO (Google Maps Live Advanced)' : 'Geo-Decay Spatial Simulation',
+      executedAt: new Date().toISOString(),
+      checkUrls,
+      totalNodes: total,
+      liveNodesCount: checkUrls.length,
+      centerCoords: center,
+      keyword,
+    },
     gridSize,
     distanceStep,
     unit,

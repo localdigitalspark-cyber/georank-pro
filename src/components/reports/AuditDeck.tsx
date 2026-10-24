@@ -48,6 +48,8 @@ import {
   Calculator,
   ArrowUpRight,
   Info,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
 
 export interface AuditDeckProps {
@@ -166,6 +168,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [avgTicketValue, setAvgTicketValue] = useState<number>(450);
   const [closeRate, setCloseRate] = useState<number>(30); // 30% default
   const [showMethodology, setShowMethodology] = useState<boolean>(false);
+  const [showAuditTrail, setShowAuditTrail] = useState<boolean>(false);
 
   // Defensive merge with fallback defaults
   const safeAudit: LocalSeoAuditOutput = {
@@ -441,6 +444,19 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
       {/* Main Pitch Deck Container (Clean Light Theme for Screen & Print) */}
       <div className="bg-white print:p-6 p-4 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6 text-slate-800 w-full max-w-full overflow-x-hidden">
+        {/* Mock Simulation Warning Banner */}
+        {safeSummary.mode === 'mock' && (
+          <div className="bg-amber-500 text-slate-950 font-black px-4 py-3 rounded-xl border-2 border-amber-600 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs tracking-wide">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-slate-950 shrink-0" />
+              <span>⚠️ SIMULATED DEMO AUDIT — Projections are based on distance decay models, not live Google Maps SERP data.</span>
+            </div>
+            <span className="font-mono text-[10px] uppercase font-bold bg-amber-600/30 px-2.5 py-1 rounded text-slate-950 shrink-0 self-start sm:self-auto border border-amber-700/30">
+              0 Credits Charged
+            </span>
+          </div>
+        )}
+
         {/* Header Metadata Section */}
         <div className="border-b border-slate-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -669,6 +685,17 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 Under {scenarioLabel} ({closedDeals} closed deals)
               </p>
             </div>
+          </div>
+
+          {/* Exact Mathematical Formula & Data Grounding Box */}
+          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-2xs text-xs space-y-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500 font-mono">
+              <span>Formula: [Estimated Monthly Searches] × [3-Pack CTR %] × [Close Rate %] × [Avg Ticket Value]</span>
+              <span className="text-emerald-700 font-bold">Estimated Google Ads Volume: {totalVolume.toLocaleString()} searches/mo</span>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              <strong className="text-slate-800">Financial Calculation Note:</strong> Grid rankings shown across the map are <strong>measured Google Maps positions</strong>. The revenue leakage figure is a <strong>calibrated financial estimate</strong> derived from your target conversion inputs ({closeRate}% lead-to-client close rate at {currencySymbol}{avgTicketValue.toLocaleString()} per job).
+            </p>
           </div>
 
           {/* Multi-Keyword Revenue Opportunity Table */}
@@ -1219,6 +1246,106 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             )}
           </div>
         </div>
+
+        {/* Data Verification & Audit Trail Box (For Live SERP Scans) */}
+        {safeSummary.mode === 'live' && (
+          <div className="bg-slate-50 rounded-2xl border border-slate-200/90 p-5 sm:p-6 space-y-4 print:break-inside-avoid">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200/80">
+                  <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                    <span>Data Verification &amp; Audit Trail</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold border border-emerald-200">
+                      Live SERP Provenance
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Query: <strong className="text-slate-800 font-semibold">{safeSummary.keyword}</strong> • Centroid: <span className="font-mono text-slate-700">{safeSummary.center?.lat?.toFixed(4)}, {safeSummary.center?.lng?.toFixed(4)}</span> • Executed: <span className="font-mono text-slate-700">{new Date(safeSummary.createdAt).toUTCString()}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAuditTrail(!showAuditTrail)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{showAuditTrail ? 'Hide Raw Evidence' : 'View Raw SERP Evidence & Google Search URLs'}</span>
+              </button>
+            </div>
+
+            {showAuditTrail && (
+              <div className="pt-3 border-t border-slate-200 space-y-3.5 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-400 font-mono uppercase block font-semibold">Data Provider</span>
+                    <span className="font-bold text-slate-900">{safeSummary.provider || 'DataForSEO (Google Maps Live Advanced)'}</span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-400 font-mono uppercase block font-semibold">Live Query Verification Task</span>
+                    <span className="font-mono text-slate-900 truncate block text-[11px]">{safeSummary.taskId || safeSummary.auditTrail?.taskId || 'Verified DataForSEO Live Query'}</span>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-400 font-mono uppercase block font-semibold">GPS Coordinates Queried</span>
+                    <span className="font-mono font-bold text-emerald-700">{safeSummary.nodes?.length || safeSummary.totalNodes} Live Google Maps Pins</span>
+                  </div>
+                </div>
+
+                {/* Primary Google Maps Check URL */}
+                {safeSummary.checkUrl && (
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="truncate min-w-0">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 block font-mono">Direct Google Maps Verification URL:</span>
+                      <a
+                        href={safeSummary.checkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 hover:text-emerald-800 underline truncate block font-mono text-[11px] mt-0.5"
+                      >
+                        {safeSummary.checkUrl}
+                      </a>
+                    </div>
+                    <a
+                      href={safeSummary.checkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shrink-0 transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      <span>Open in Google Maps</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Verified Ranking Entities from Google SERP */}
+                {safeSummary.dominantCompetitors && safeSummary.dominantCompetitors.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 block">
+                      Actual Ranking Entities Captured on Google Maps:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {safeSummary.dominantCompetitors.map((comp, idx) => (
+                        <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200/80 text-xs space-y-1">
+                          <span className="font-bold text-slate-900 block truncate">{comp.name}</span>
+                          <span className="text-[11px] text-slate-500 block">
+                            ★ {comp.rating} ({comp.reviews} Google reviews)
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-emerald-700 block">
+                            Captures {comp.top3SharePercent}% of scanned territory (Avg #{comp.avgRank})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Printable Footer */}
         <div className="hidden print:flex items-center justify-between pt-4 border-t border-slate-300 text-xs text-slate-500 font-mono">

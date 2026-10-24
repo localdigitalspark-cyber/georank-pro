@@ -667,9 +667,14 @@ export default function DashboardPage() {
         setIsScanning(false);
         return;
       } catch (err: any) {
-        console.error('Backend live scan error, falling back:', err);
-        setLiveNotice(`Live scan note: ${err?.message || 'Using local simulation engine'}`);
-        setTimeout(() => setLiveNotice(null), 6000);
+        console.error('Live DataForSEO scan failed:', err);
+        setIsScanning(false);
+        setScanProgress(0);
+        setScanStepText('');
+        const errorMsg = err?.message || 'Live SERP query failed';
+        setLiveNotice(`Live SERP API Failed: ${errorMsg}. Credits were not charged.`);
+        alert(`Live SERP API Failed:\n${errorMsg}\n\nCredits were not charged.`);
+        return; // FAIL LOUDLY: Never silently fallback to mock simulation!
       }
     }
 
@@ -694,11 +699,7 @@ export default function DashboardPage() {
       });
 
       setScanProgress(30);
-      setScanStepText(
-        `Scanning ${grid.points.length} nodes via ${
-          curScanMode === 'live' ? 'DataForSEO SERP' : 'Geo-Decay Engine'
-        }...`
-      );
+      setScanStepText(`Scanning ${grid.points.length} nodes via Geo-Decay Engine...`);
 
       // 2. Scan nodes (concurrent batch)
       const scannedNodes: NodeScanOutput[] = [];
@@ -745,8 +746,7 @@ export default function DashboardPage() {
       setScanSummary(summary);
       setSelectedNode(scannedNodes.find((n) => n.isCenter) || scannedNodes[0]);
 
-      // Deduct credits
-      setCredits((prev) => Math.max(0, prev - totalPoints));
+      // Append to history (Predictive simulation model costs 0 credits)
 
       // Append to history
       const historyRecord: ScanMasterRecord = {
