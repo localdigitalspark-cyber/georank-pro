@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* 
+ * White-Label PDF Export & Print Styling 
+ * Ensures crisp high-fidelity client reports with background colors and page breaks
+ */
+@media print {
+  html, body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Hide interactive controls, sidebars, progress indicators during print */
+  .print\:hidden,
+  button,
+  input,
+  select,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Keep leafelt tiles & markers visible in print */
+  .leaflet-container {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  /* Auto page-breaks for clean presentation */
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
