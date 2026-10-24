@@ -4,9 +4,11 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install --legacy-peer-deps && npm run build
-    startCommand: npm start
+    buildCommand: npm install --include=dev --legacy-peer-deps && npm run build
+    startCommand: node ./node_modules/tsx/dist/cli.mjs server.ts
     envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
       - key: NODE_ENV
         value: production
       - key: PORT

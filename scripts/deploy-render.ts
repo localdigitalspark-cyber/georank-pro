@@ -72,12 +72,28 @@ async function main() {
     if (page.url().includes('/login')) {
       console.log('\n------------------------------------------------------------------------');
       console.log('  ⚠️ AUTHENTICATION REQUIRED:');
-      console.log('  Please sign into Render in the open Chrome window (e.g. click "GitHub").');
-      console.log('  Waiting up to 180 seconds for authentication to complete...');
+      console.log('  Attempting to click "GitHub" sign-in button automatically...');
       console.log('------------------------------------------------------------------------\n');
 
+      await page.bringToFront();
+
+      const githubBtn = page.locator('button:has-text("GitHub"), a:has-text("GitHub")').first();
+      if (await githubBtn.isVisible()) {
+        await githubBtn.click();
+        console.log('  Clicked "GitHub" button. Awaiting OAuth redirect...');
+        await sleep(3000);
+      }
+
+      // If GitHub OAuth authorization button appears
+      const authorizeBtn = page.locator('button:has-text("Authorize"), input[value="Authorize render"]').first();
+      if (await authorizeBtn.isVisible()) {
+        console.log('  Found GitHub OAuth Authorize button, clicking...');
+        await authorizeBtn.click();
+        await sleep(3000);
+      }
+
       const loggedIn = await Promise.race([
-        page.waitForURL((url) => !url.toString().includes('/login'), { timeout: 180000 }).then(() => true),
+        page.waitForURL((url) => !url.toString().includes('/login') && !url.toString().includes('github.com'), { timeout: 180000 }).then(() => true),
         sleep(180000).then(() => false),
       ]);
 
