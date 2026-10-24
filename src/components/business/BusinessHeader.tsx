@@ -6,7 +6,7 @@
  * "Client reports" action, and the ProfitMaps sub-navigation tab bar.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Building2,
   MapPin,
@@ -23,6 +23,8 @@ import {
   ExternalLink,
   Tag,
   ArrowLeft,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export type BusinessSubTab =
@@ -44,6 +46,7 @@ export interface BusinessHeaderProps {
   onOpenNewScan: () => void;
   onOpenReports: () => void;
   onBackToBusinesses?: () => void;
+  onDeleteBusiness?: () => void;
   totalKeywords?: number;
   isScanning?: boolean;
 }
@@ -57,9 +60,11 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
   onOpenNewScan,
   onOpenReports,
   onBackToBusinesses,
+  onDeleteBusiness,
   totalKeywords = 1,
   isScanning = false,
 }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const tabs: { id: BusinessSubTab; label: string; count?: number; isAi?: boolean }[] = [
     { id: 'keywords', label: 'Keywords', count: totalKeywords },
     { id: 'todo', label: 'To-do', count: 4 },
@@ -115,7 +120,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
         </div>
 
         {/* Action CTAs */}
-        <div className="flex items-center space-x-2.5 shrink-0">
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={() => {
               console.log('Client Report clicked! Current active business:', businessName);
@@ -131,6 +136,17 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
             <span>Client reports</span>
           </button>
 
+          {onDeleteBusiness && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200/90 hover:border-rose-200 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+              title="Delete this business and its scans"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Delete</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenNewScan}
             disabled={isScanning}
@@ -141,6 +157,47 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Delete &quot;{businessName}&quot;?
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Are you sure you want to delete this business? All associated geo-grid rankings, keyword telemetry, and saved client reports will be permanently purged.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  if (onDeleteBusiness) onDeleteBusiness();
+                }}
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-rose-600/20 transition cursor-pointer"
+              >
+                Yes, Delete Business
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sub-Navigation Tabs */}
       <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar border-t border-slate-100 pt-1 -mb-px">

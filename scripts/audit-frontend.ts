@@ -387,6 +387,24 @@ async function runAudit() {
         await addBizBtn.click();
         await page.waitForTimeout(600);
 
+        // Verify 3 tabs are present in Add or Import Business modal:
+        const hasGbpTab = await page.locator('button:has-text("Google Business Profile")').first().isVisible();
+        const hasWebTab = await page.locator('button:has-text("Website URL")').first().isVisible();
+        const hasManualTab = await page.locator('button:has-text("Manual Entry")').first().isVisible();
+
+        if (hasGbpTab && hasWebTab && hasManualTab) {
+          recordPass('Wizard Tabs: GBP, Website URL, and Manual Entry Rendered', 'Onboarding');
+        } else {
+          recordFail('Wizard Tabs', 'Onboarding', 'One or more of the 3 import tabs are missing');
+        }
+
+        // Switch to Manual Entry tab to verify Section 01 & Section 02
+        const manualTab = page.locator('button:has-text("Manual Entry")').first();
+        if (await manualTab.isVisible()) {
+          await manualTab.click();
+          await page.waitForTimeout(300);
+        }
+
         // Verify Section 01 and Section 02 presence
         const hasSec1 = await page.locator('text=SECTION 01').first().isVisible();
         const hasSec2 = await page.locator('text=SECTION 02').first().isVisible();

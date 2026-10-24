@@ -99,6 +99,7 @@ export default function DashboardPage() {
   const [keywordCache, setKeywordCache] = useState<Record<string, KeywordScanEntry>>(INITIAL_KEYWORD_CACHE);
 
   // Active Business Profile & Scan Config State
+  const [activeBusinessId, setActiveBusinessId] = useState<string>('b1');
   const [businessName, setBusinessName] = useState<string>('Austin Premier Plumbing');
   const [businessAddress, setBusinessAddress] = useState<string>('1024 Congress Ave, Austin, TX 78701');
   const [targetPlaceId, setTargetPlaceId] = useState<string | undefined>('preset_austin_plumbing');
@@ -772,6 +773,7 @@ export default function DashboardPage() {
 
   // Switch to selected business card from Directory
   const handleSelectBusinessCard = (item: BusinessCardItem) => {
+    setActiveBusinessId(item.id);
     setBusinessName(item.name);
     setBusinessAddress(item.address);
     setCategory(item.category);
@@ -800,6 +802,22 @@ export default function DashboardPage() {
         activeEntry.summary.nodes.find((n) => n.isCenter) || activeEntry.summary.nodes[0] || null
       );
       setAuditOutput(activeEntry.audit);
+    }
+  };
+
+  // Handle active business deletion from BusinessHeader
+  const handleDeleteActiveBusiness = async () => {
+    if (!activeBusinessId) return;
+    try {
+      const res = await fetch(`/api/businesses/${activeBusinessId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setBusinessWorkspaceOpen(false);
+        setActiveBusinessId('');
+      }
+    } catch (err) {
+      console.error('Failed to delete active business:', err);
     }
   };
 
@@ -857,6 +875,7 @@ export default function DashboardPage() {
             onOpenNewScan={() => setIsNewScanOpen(true)}
             onOpenReports={() => handleOpenClientReport()}
             onBackToBusinesses={() => setBusinessWorkspaceOpen(false)}
+            onDeleteBusiness={handleDeleteActiveBusiness}
             totalKeywords={Object.keys(keywordCache).length}
             isScanning={isScanning}
           />
@@ -1021,6 +1040,11 @@ export default function DashboardPage() {
                 onOpenAddBusinessModal={() => setIsWizardOpen(true)}
                 currentBusinessName={businessName}
                 onLocationResolved={handleLocationResolved}
+                onBusinessDeleted={(deletedId) => {
+                  if (activeBusinessId === deletedId) {
+                    setActiveBusinessId('');
+                  }
+                }}
               />
             )
           )}
@@ -1210,7 +1234,31 @@ export default function DashboardPage() {
           initialLng={centerLng}
           initialWebsite={targetWebsite || targetDomain}
           initialPlaceId={targetPlaceId}
-          onComplete={(data, selectedKeywords) => {
+          onComplete={async (data, selectedKeywords) => {
+            try {
+              const res = await fetch('/api/businesses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  name: data.businessName,
+                  category: data.category,
+                  address: data.address,
+                  phone: data.phone,
+                  website: data.website || data.domainOrUrl,
+                  lat: data.lat,
+                  lng: data.lng,
+                  placeId: data.placeId,
+                  keyword: selectedKeywords[0] || data.category,
+                }),
+              });
+              const saved = await res.json();
+              if (saved?.business?.id) {
+                setActiveBusinessId(saved.business.id);
+              }
+            } catch (e) {
+              console.warn('Could not persist new business via API:', e);
+            }
+
             setBusinessName(data.businessName);
             setCategory(data.category);
             setBusinessAddress(data.address);

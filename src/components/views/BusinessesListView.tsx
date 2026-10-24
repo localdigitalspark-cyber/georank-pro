@@ -9,7 +9,7 @@
  * - 1-Click selection that launches the business map workspace
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Search,
@@ -25,6 +25,9 @@ import {
   Loader2,
   Sparkles,
   FileText,
+  Trash2,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { inferKeywordFromTrade, type ResolvedLocation } from '../search/BusinessSearchInput.tsx';
 
@@ -48,6 +51,7 @@ export interface BusinessesListViewProps {
   onOpenAddBusinessModal: () => void;
   currentBusinessName?: string;
   onLocationResolved?: (location: ResolvedLocation) => void;
+  onBusinessDeleted?: (id: string, name: string) => void;
 }
 
 const KNOWN_CITIES: Record<string, { lat: number; lng: number; city: string }> = {
@@ -69,6 +73,7 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
   onOpenAddBusinessModal,
   currentBusinessName,
   onLocationResolved,
+  onBusinessDeleted,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isResolving, setIsResolving] = useState(false);
@@ -209,6 +214,50 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
   ];
 
   const [businesses, setBusinesses] = useState<BusinessCardItem[]>(initialBusinesses);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Fetch managed businesses from server on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/businesses')
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data.success && Array.isArray(data.businesses) && data.businesses.length > 0) {
+          setBusinesses(data.businesses);
+        }
+      })
+      .catch((err) => {
+        console.warn('BusinessesListView: Using initial businesses cache:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const executeDelete = async (id: string, name: string) => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/businesses/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setBusinesses((prev) => prev.filter((b) => b.id !== id));
+        setConfirmDeleteId(null);
+        setToastMessage(`"${name}" and all associated scans were deleted.`);
+        setTimeout(() => setToastMessage(null), 5000);
+        if (onBusinessDeleted) {
+          onBusinessDeleted(id, name);
+        }
+      } else {
+        alert(data.error || 'Failed to delete business');
+      }
+    } catch (err: any) {
+      alert(`Error deleting business: ${err.message || 'Network error'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filtered = businesses.filter(
     (b) =>
@@ -219,6 +268,22 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-2xl text-xs flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center space-x-2 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-emerald-600 hover:text-emerald-800 p-1 rounded-lg hover:bg-emerald-100 transition cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner & Filter */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -379,6 +444,37 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
                   </div>
                 </div>
 
+                {/* Inline Delete Confirmation Prompt */}
+                {confirmDeleteId === item.id && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in"
+                  >
+                    <div className="flex items-center space-x-2 text-rose-800 font-semibold">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Delete this business and its scans?</span>
+                    </div>
+                    <div className="flex items-center space-x-1.5 self-end sm:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => executeDelete(item.id, item.name)}
+                        disabled={isDeleting}
+                        className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] shadow-2xs transition cursor-pointer disabled:opacity-50"
+                      >
+                        {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={isDeleting}
+                        className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-medium text-[11px] transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Card Footer */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <span className="text-[11px] text-slate-400 flex items-center space-x-1">
@@ -398,6 +494,19 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
                     >
                       <FileText className="w-3 h-3 text-slate-500" />
                       <span>Client report</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteId(confirmDeleteId === item.id ? null : item.id);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                      title="Delete business and scans"
+                      aria-label={`Delete ${item.name}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
 
                     <span className="text-emerald-700 font-bold group-hover:translate-x-0.5 transition flex items-center space-x-1 text-xs">

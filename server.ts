@@ -20,6 +20,17 @@ import { generateGeoGrid } from './src/lib/geo/grid-generator.ts';
 import { buildInitialKeywordScanCache } from './src/lib/geo/keyword-scans.ts';
 import { scanGridNode, summarizeGridScan, isDataForSeoConfigured } from './src/lib/serp/adapter.ts';
 import { saveScan, getScan, listScans } from './src/lib/storage/scan-store.ts';
+import {
+  listBusinesses,
+  getBusiness,
+  saveBusiness,
+  updateBusiness,
+  deleteBusiness,
+  type ManagedBusiness,
+} from './src/lib/storage/business-store.ts';
+import { scrapeWebsiteForBusiness } from './src/lib/importers/website-importer.ts';
+import { searchGbpCandidates, fetchGbpBusinessDetails } from './src/lib/importers/gbp-importer.ts';
+import { resolveBusiness } from './src/lib/places/places-resolver.ts';
 import { runAllEngineTests } from './src/engine/engineTests.ts';
 import {
   resolveBusinessOp,
@@ -490,6 +501,185 @@ app.get('/api/geo/autocomplete', async (req: Request, res: Response) => {
     console.warn('Geocoding autocomplete fallback error:', err?.message || err);
     // Never fail with 500 - always return default presets
     res.json(LOCAL_PRESETS);
+  }
+});
+
+/* ========================================================================= */
+/* BUSINESS LIFECYCLE & MULTI-SOURCE IMPORT API                             */
+/* ========================================================================= */
+
+/**
+ * List all managed businesses
+ */
+app.get('/api/businesses', (_req: Request, res: Response) => {
+  try {
+    const list = listBusinesses();
+    res.json({ success: true, count: list.length, businesses: list });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed listing businesses' });
+  }
+});
+
+/**
+ * Get single business by ID
+ */
+app.get('/api/businesses/:id', (req: Request, res: Response) => {
+  try {
+    const b = getBusiness(req.params.id);
+    if (!b) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    res.json({ success: true, business: b });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed retrieving business' });
+  }
+});
+
+/**
+ * Manual Business Creation
+ */
+app.post('/api/businesses', async (req: Request, res: Response) => {
+  try {
+    const { name, category, address, phone, website, lat, lng, ...rest } = req.body || {};
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Business name is required' });
+    }
+    if (!category || !category.trim()) {
+      return res.status(400).json({ success: false, error: 'Business category is required' });
+    }
+    if (!address || !address.trim()) {
+      return res.status(400).json({ success: false, error: 'Business address is required' });
+    }
+
+    let finalLat = Number(lat);
+    let finalLng = Number(lng);
+
+    if (isNaN(finalLat) || isNaN(finalLng) || (finalLat === 0 && finalLng === 0)) {
+      try {
+        const resolved = await resolveBusiness({ query: name, targetTownOrPostcode: address });
+        finalLat = resolved.lat;
+        finalLng = resolved.lng;
+      } catch {
+        finalLat = 30.2672;
+        finalLng = -97.7431;
+      }
+    }
+
+    const saved = saveBusiness({
+      name,
+      category,
+      address,
+      phone: phone || '',
+      website: website || '',
+      lat: finalLat,
+      lng: finalLng,
+      source: 'manual',
+      ...rest,
+    });
+
+    res.status(201).json({ success: true, business: saved });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed creating business' });
+  }
+});
+
+/**
+ * Delete business by ID with cascaded scan cleanup
+ */
+app.delete('/api/businesses/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = deleteBusiness(id);
+    if (!result.success) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    res.json({
+      success: true,
+      deletedId: id,
+      deletedScansCount: result.deletedScansCount,
+      message: `Business deleted successfully (${result.deletedScansCount} associated scan(s) purged)`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed deleting business' });
+  }
+});
+
+/**
+ * Search Google Business Profile candidates for live modal autocomplete
+ */
+app.all('/api/businesses/import/gbp/search', async (req: Request, res: Response) => {
+  try {
+    const query = (req.query.q as string) || req.body?.query || req.body?.q || '';
+    const location = (req.query.location as string) || req.body?.location || '';
+    if (!query.trim()) {
+      return res.json({ success: true, candidates: [] });
+    }
+    const candidates = await searchGbpCandidates(query, location);
+    res.json({ success: true, candidates });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'GBP search failed' });
+  }
+});
+
+/**
+ * Import Business from Google Business Profile (Method A)
+ */
+app.post('/api/businesses/import/gbp', async (req: Request, res: Response) => {
+  try {
+    const { query, location, placeId } = req.body || {};
+    if (!query && !placeId) {
+      return res.status(400).json({ success: false, error: 'Provide a search query or Google Place ID' });
+    }
+    const details = await fetchGbpBusinessDetails({ query, location, placeId });
+    const saved = saveBusiness({
+      name: details.name,
+      category: details.category,
+      secondaryCategories: details.secondaryCategories,
+      address: details.address,
+      city: details.city,
+      postcode: details.postcode,
+      phone: details.phone,
+      website: details.website,
+      lat: details.lat,
+      lng: details.lng,
+      placeId: details.placeId,
+      rating: details.rating,
+      reviews: details.reviews,
+      suggestedKeywords: details.suggestedKeywords,
+      source: 'gbp',
+    });
+    res.status(201).json({ success: true, business: saved });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed importing from GBP' });
+  }
+});
+
+/**
+ * Import Business from Website URL (Method B)
+ */
+app.post('/api/businesses/import/website', async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body || {};
+    if (!url || !url.trim()) {
+      return res.status(400).json({ success: false, error: 'A valid website URL is required' });
+    }
+    const scraped = await scrapeWebsiteForBusiness(url);
+    const saved = saveBusiness({
+      name: scraped.name,
+      category: scraped.category,
+      address: scraped.address,
+      city: scraped.city,
+      phone: scraped.phone,
+      website: scraped.website,
+      lat: scraped.lat,
+      lng: scraped.lng,
+      suggestedKeywords: scraped.suggestedKeywords,
+      notes: scraped.description ? `Extracted Meta: ${scraped.description}` : undefined,
+      source: 'website',
+    });
+    res.status(201).json({ success: true, business: saved, extracted: scraped });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed importing from website URL' });
   }
 });
 

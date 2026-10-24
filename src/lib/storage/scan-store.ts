@@ -196,3 +196,40 @@ export function listScans(limit = 20): StoredScanRecord[] {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit);
 }
+
+/**
+ * Deletes a single scan by scanId
+ */
+export function deleteScan(scanId: string): boolean {
+  if (!scanId || !inMemoryScans.has(scanId)) return false;
+  inMemoryScans.delete(scanId);
+  persistToDisk();
+  return true;
+}
+
+/**
+ * Purges/cascades all scans associated with a given business ID or name
+ */
+export function deleteScansForBusiness(businessId: string, businessName?: string): number {
+  let deletedCount = 0;
+  const targetIdLower = businessId?.toLowerCase().trim();
+  const targetNameLower = businessName?.toLowerCase().trim();
+
+  for (const [id, scan] of Array.from(inMemoryScans.entries())) {
+    const matchesId = id.toLowerCase().includes(targetIdLower) ||
+      (scan as any).businessId?.toLowerCase() === targetIdLower;
+    const matchesName = targetNameLower && scan.businessName?.toLowerCase().trim() === targetNameLower;
+
+    if (matchesId || matchesName) {
+      inMemoryScans.delete(id);
+      deletedCount++;
+    }
+  }
+
+  if (deletedCount > 0) {
+    persistToDisk();
+  }
+  return deletedCount;
+}
+
+export { resolveStorageDir };
