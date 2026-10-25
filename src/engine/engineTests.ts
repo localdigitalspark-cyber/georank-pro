@@ -86,17 +86,29 @@ export function runAllEngineTests(): {
   // SUITE 1: COORDINATE GRID GENERATOR
   // ==========================================
 
-  record('GeoGrid Generator', 'Generates correct point count for 3x3, 5x5, and 7x7 grids', () => {
+  record('GeoGrid Generator', 'Generates correct point count for 3x3, 5x5, 7x7, and 9x9 grids', () => {
     const center = { lat: 30.2672, lng: -97.7431 }; // Austin, TX
     const grid3 = generateGeoGrid({ center, gridSize: 3, distanceStep: 1.0, unit: 'km' });
     const grid5 = generateGeoGrid({ center, gridSize: 5, distanceStep: 1.0, unit: 'km' });
     const grid7 = generateGeoGrid({ center, gridSize: 7, distanceStep: 0.5, unit: 'mi' });
+    const grid9 = generateGeoGrid({ center, gridSize: 9, distanceStep: 1.0, unit: 'km' });
 
-    const passed = grid3.points.length === 9 && grid5.points.length === 25 && grid7.points.length === 49;
+    const passed =
+      grid3.points.length === 9 &&
+      grid5.points.length === 25 &&
+      grid7.points.length === 49 &&
+      grid9.points.length === 81;
     return {
       passed,
-      message: passed ? 'All grid dimensions produce exactly N^2 nodes.' : `Point count mismatch: 3x3=${grid3.points.length}, 5x5=${grid5.points.length}, 7x7=${grid7.points.length}`,
-      data: { grid3Count: grid3.points.length, grid5Count: grid5.points.length, grid7Count: grid7.points.length }
+      message: passed
+        ? 'All grid dimensions produce exactly N^2 nodes.'
+        : `Point count mismatch: 3x3=${grid3.points.length}, 5x5=${grid5.points.length}, 7x7=${grid7.points.length}, 9x9=${grid9.points.length}`,
+      data: {
+        grid3Count: grid3.points.length,
+        grid5Count: grid5.points.length,
+        grid7Count: grid7.points.length,
+        grid9Count: grid9.points.length,
+      },
     };
   });
 

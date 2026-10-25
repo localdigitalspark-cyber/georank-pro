@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const [keyword, setKeyword] = useState<string>('Emergency Plumber');
   const [centerLat, setCenterLat] = useState<number>(30.2672);
   const [centerLng, setCenterLng] = useState<number>(-97.7431);
-  const [gridSize, setGridSize] = useState<number>(5); // 3x3, 5x5, 7x7
+  const [gridSize, setGridSize] = useState<number>(5); // 3x3, 5x5, 7x7, 9x9
   const [distanceStep, setDistanceStep] = useState<number>(1.0);
   const [unit, setUnit] = useState<DistanceUnit>('km');
   const [scanMode, setScanMode] = useState<SerpScanMode>('mock');

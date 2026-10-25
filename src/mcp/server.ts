@@ -76,9 +76,9 @@ export function createMcpServer(): McpServer {
       lat: z.number().describe('Centroid latitude'),
       lng: z.number().describe('Centroid longitude'),
       gridSize: z
-        .union([z.literal(3), z.literal(5), z.literal(7)])
+        .union([z.literal(3), z.literal(5), z.literal(7), z.literal(9)])
         .optional()
-        .describe('Grid dimension: 3 (3x3), 5 (5x5), or 7 (7x7). Default is 5.'),
+        .describe('Grid dimension: 3 (3x3), 5 (5x5), 7 (7x7), or 9 (9x9). Default is 5.'),
       distanceStep: z
         .number()
         .optional()
@@ -440,7 +440,7 @@ export function getAgentToolsCatalog() {
           keyword: { type: 'string', description: 'Target search keyword' },
           lat: { type: 'number', description: 'Centroid latitude' },
           lng: { type: 'number', description: 'Centroid longitude' },
-          gridSize: { type: 'number', enum: [3, 5, 7], default: 5 },
+          gridSize: { type: 'number', enum: [3, 5, 7, 9], default: 5 },
           distanceStep: { type: 'number', default: 1.0 },
           unit: { type: 'string', enum: ['km', 'mi'], default: 'km' },
           mode: { type: 'string', enum: ['mock', 'live'], default: 'mock' },

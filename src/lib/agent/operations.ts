@@ -46,10 +46,10 @@ export const RunGeogridScanSchema = z.object({
   lat: z.number().describe('Centroid latitude'),
   lng: z.number().describe('Centroid longitude'),
   gridSize: z
-    .union([z.literal(3), z.literal(5), z.literal(7)])
+    .union([z.literal(3), z.literal(5), z.literal(7), z.literal(9)])
     .optional()
     .default(5)
-    .describe('Dimension of grid: 3 (3x3), 5 (5x5), or 7 (7x7)'),
+    .describe('Dimension of grid: 3 (3x3), 5 (5x5), 7 (7x7), or 9 (9x9)'),
   distanceStep: z
     .number()
     .optional()

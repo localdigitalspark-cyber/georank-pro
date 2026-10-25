@@ -594,7 +594,11 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
             {/* Centroid Scan Radius Boundary */}
             <Circle
               center={[scanSummary.center.lat, scanSummary.center.lng]}
-              radius={scanSummary.distanceStep * (scanSummary.gridSize / 2) * 1000}
+              radius={
+                scanSummary.distanceStep *
+                (scanSummary.gridSize / 2) *
+                (scanSummary.unit === 'mi' ? 1609.34 : 1000)
+              }
               pathOptions={{
                 color: '#16a34a',
                 fillColor: '#16a34a',

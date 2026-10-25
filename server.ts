@@ -936,6 +936,7 @@ app.post('/api/analytics/reset', (_req: Request, res: Response) => {
  * Multi-Node Geo-Grid Scan Orchestrator API
  */
 app.post('/api/scan', async (req: Request, res: Response) => {
+  req.setTimeout(300000); // 5 min timeout for deep grid scans (up to 81 pins)
   try {
     const body = req.body || {};
     const center =
@@ -977,10 +978,10 @@ app.post('/api/scan', async (req: Request, res: Response) => {
       unit,
     });
 
-    // 2. Scan nodes in controlled batches of 5 to prevent concurrency rate limits
+    // 2. Scan nodes in controlled batches (5 for live to respect rate limits, 25 for mock)
     const scanId = `scan_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const nodeResults: any[] = [];
-    const batchSize = 5;
+    const batchSize = mode === 'live' ? 5 : 25;
 
     for (let i = 0; i < grid.points.length; i += batchSize) {
       const chunk = grid.points.slice(i, i + batchSize);
