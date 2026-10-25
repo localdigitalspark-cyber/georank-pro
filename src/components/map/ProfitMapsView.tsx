@@ -309,7 +309,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 w-full max-w-full overflow-x-hidden">
       {/* 1. Keyword Selector & Action Bar (Hard-locked single row on mobile) */}
       <div className="flex flex-nowrap items-center justify-between gap-2 w-full bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 shadow-xs mt-3 mb-2 overflow-visible relative z-30">
         {/* Left: Active Keyword Dropdown (~60% on mobile) + Desktop Discover Keywords */}

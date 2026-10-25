@@ -574,7 +574,7 @@ export const BusinessSearchInput: React.FC<BusinessSearchInputProps> = ({
 
           {/* Autocomplete Dropdown */}
           {isOpen && (
-            <div className="absolute z-[100] top-full left-0 mt-1.5 w-full min-w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-100">
+            <div className="absolute z-[100] top-full left-0 mt-1.5 w-full min-w-0 max-w-full sm:min-w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-100">
               {/* Header Info */}
               <div className="px-3.5 py-1.5 bg-slate-50 text-[10px] font-mono text-slate-500 flex items-center justify-between">
                 <span>SUGGESTED LOCAL ENTITIES</span>

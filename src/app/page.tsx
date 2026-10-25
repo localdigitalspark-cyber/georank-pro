@@ -1036,7 +1036,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col lg:flex-row w-full max-w-full overflow-x-hidden">
       {/* 1. Left Vertical Navigation Sidebar */}
       <AppSidebar
         activeNav={activeNav}
@@ -1059,7 +1059,7 @@ export default function DashboardPage() {
       />
 
       {/* 2. Main Content Canvas */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full lg:ml-64 overflow-x-hidden">
         {/* Top Header */}
         <AppHeader
           businessName={businessName}
@@ -1154,7 +1154,7 @@ export default function DashboardPage() {
         )}
 
         {/* Main Body Workspace Container: View Switcher */}
-        <main className="flex-1 p-4 sm:p-6 space-y-4">
+        <main className="flex-1 p-4 sm:p-6 space-y-4 w-full max-w-full overflow-x-hidden">
           {/* VIEW: Businesses (Workspace OR Directory Cards) */}
           {activeNav === 'businesses' && (
             businessWorkspaceOpen ? (

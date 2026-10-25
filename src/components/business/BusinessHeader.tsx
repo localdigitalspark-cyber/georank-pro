@@ -136,7 +136,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
         </div>
 
         {/* Action CTAs */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
               console.log('Client Report clicked! Current active business:', businessName);

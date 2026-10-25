@@ -8,6 +8,11 @@ html, body, #root {
   box-sizing: border-box;
 }
 
+.leaflet-container {
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
