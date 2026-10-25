@@ -36,9 +36,15 @@ async function triggerDeploy() {
     if (!response.ok) {
       throw new Error(`Render API responded with HTTP ${response.status}: ${response.statusText}`);
     }
-    const data = await response.json();
+    const rawText = await response.text();
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      parsed = rawText.trim();
+    }
     console.log('✅ Render Deploy Successfully Queued:');
-    console.log(JSON.stringify(data, null, 2));
+    console.log(typeof parsed === 'object' ? JSON.stringify(parsed, null, 2) : parsed);
   } catch (error) {
     console.error('❌ Failed to trigger Render deploy hook:', error.message);
     process.exit(1);
