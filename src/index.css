@@ -50,3 +50,50 @@ html, body, #root {
     break-inside: avoid !important;
   }
 }
+
+/* 
+ * Unconditional Mobile Screen Rules (< 640px)
+ * Hard-locks single-row layout, mobile dropdowns, and eliminates floating overlays
+ */
+@media screen and (max-width: 639.98px) {
+  .mobile-subtab-select-container {
+    display: block !important;
+  }
+  .desktop-subtab-container {
+    display: none !important;
+  }
+  .mobile-kpi-bar-container {
+    display: grid !important;
+  }
+  .desktop-floating-details-container {
+    display: none !important;
+    position: static !important;
+  }
+  .desktop-only-map-action {
+    display: none !important;
+  }
+  .mobile-only-map-action {
+    display: flex !important;
+  }
+}
+
+@media screen and (min-width: 640px) {
+  .mobile-subtab-select-container {
+    display: none !important;
+  }
+  .desktop-subtab-container {
+    display: flex !important;
+  }
+  .mobile-kpi-bar-container {
+    display: none !important;
+  }
+  .desktop-floating-details-container {
+    display: block !important;
+  }
+  .desktop-only-map-action {
+    display: flex !important;
+  }
+  .mobile-only-map-action {
+    display: none !important;
+  }
+}

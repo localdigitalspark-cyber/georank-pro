@@ -310,19 +310,19 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* 1. Keyword Selector & Action Bar */}
-      <div className="flex items-center justify-between gap-2 bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 shadow-xs mt-3 mb-2 overflow-visible relative z-30">
+      {/* 1. Keyword Selector & Action Bar (Hard-locked single row on mobile) */}
+      <div className="flex flex-nowrap items-center justify-between gap-2 w-full bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 shadow-xs mt-3 mb-2 overflow-visible relative z-30">
         {/* Left: Active Keyword Dropdown (~60% on mobile) + Desktop Discover Keywords */}
-        <div className="w-[58%] sm:w-auto flex items-center gap-2 min-w-0">
+        <div className="w-[60%] sm:w-auto flex-1 sm:flex-initial flex items-center gap-2 min-w-0">
           {/* Active Keyword Dropdown Menu */}
-          <div className="relative w-full sm:w-auto" ref={keywordDropdownRef}>
+          <div className="relative w-full sm:w-auto min-w-0" ref={keywordDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setShowActionsDropdown(false);
                 setIsKeywordDropdownOpen(!isKeywordDropdownOpen);
               }}
-              className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none"
+              className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1 sm:gap-2 px-2.5 sm:px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none"
               aria-expanded={isKeywordDropdownOpen}
               aria-haspopup="true"
             >
@@ -453,7 +453,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
               setShowActionsDropdown(false);
               setIsDiscoveryModalOpen(true);
             }}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none shrink-0"
+            className="desktop-only-map-action hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none shrink-0"
             title="Discover high-volume local keywords with real search traffic and CPC"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
@@ -461,27 +461,27 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
           </button>
         </div>
 
-        {/* Right: Actions Menu (~40% on mobile) & Desktop Action Plan */}
-        <div className="w-[40%] sm:w-auto flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+        {/* Right column: Actions Menu (~40% on mobile) & Desktop Action Plan */}
+        <div className="w-[40%] sm:w-auto shrink-0 flex items-center justify-end gap-1.5 sm:gap-2 min-w-0">
           {onOpenActionPlan && (
             <button
               type="button"
               onClick={onOpenActionPlan}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/70 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="desktop-only-map-action hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/70 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span>Action Plan</span>
             </button>
           )}
 
-          <div className="relative w-full sm:w-auto" ref={actionsDropdownRef}>
+          <div className="relative w-full sm:w-auto min-w-0" ref={actionsDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setIsKeywordDropdownOpen(false);
                 setShowActionsDropdown(!showActionsDropdown);
               }}
-              className="w-full sm:w-auto flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+              className="w-full sm:w-auto flex items-center justify-center gap-1 px-2.5 sm:px-3 py-2 bg-slate-100 hover:bg-slate-200/70 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap"
             >
               <span>Actions</span>
               <MoreVertical className="w-3.5 h-3.5" />
@@ -497,7 +497,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                     setShowActionsDropdown(false);
                     setIsDiscoveryModalOpen(true);
                   }}
-                  className="sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-emerald-700 hover:bg-emerald-50 text-left transition cursor-pointer font-medium"
+                  className="mobile-only-map-action sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-emerald-700 hover:bg-emerald-50 text-left transition cursor-pointer font-medium"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Discover Keywords</span>
@@ -509,7 +509,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                       setShowActionsDropdown(false);
                       onOpenActionPlan();
                     }}
-                    className="sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-amber-700 hover:bg-amber-50 text-left transition cursor-pointer font-medium"
+                    className="mobile-only-map-action sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-amber-700 hover:bg-amber-50 text-left transition cursor-pointer font-medium"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     <span>Action Plan</span>
@@ -606,7 +606,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
 
       {/* Mobile-Only Slim 3-Card KPI Bar above Map Canvas */}
       {scanSummary && (
-        <div data-testid="mobile-kpi-bar" className="sm:hidden grid grid-cols-3 gap-2 bg-white p-2 rounded-xl border border-slate-200/80 shadow-xs text-center">
+        <div data-testid="mobile-kpi-bar" className="mobile-kpi-bar-container sm:hidden grid grid-cols-3 gap-2 bg-white p-2 rounded-xl border border-slate-200/80 shadow-xs text-center">
           <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-lg py-1.5 px-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block truncate">
               Avg SERP
@@ -640,7 +640,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
       )}
 
       {/* 2. Interactive Map Container with Floating Elements */}
-      <div className="relative w-full h-[520px] sm:h-[620px] rounded-2xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-xs">
+      <div className="relative w-full min-h-[360px] h-[480px] sm:h-[620px] rounded-2xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-xs">
         {scanSummary ? (
           <MapContainer
             center={[scanSummary.center.lat, scanSummary.center.lng]}
@@ -701,7 +701,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
 
         {/* 3. Floating Details Card (Desktop only, Top-Left over Map) */}
         {scanSummary && (
-          <div data-testid="desktop-floating-details" className="hidden sm:block absolute top-4 left-4 z-20 w-72 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden text-xs transition-all">
+          <div data-testid="desktop-floating-details" className="desktop-floating-details-container hidden sm:block sm:absolute sm:top-4 sm:left-4 sm:z-20 w-72 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden text-xs transition-all">
             {/* Card Sub-Tabs */}
             <div className="flex border-b border-slate-200/80 bg-slate-50/70">
               <button

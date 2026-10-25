@@ -83,7 +83,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
   ];
 
   return (
-    <div className="bg-white border-b border-slate-200/80 px-4 sm:px-6 pt-5 pb-1">
+    <div className="bg-white border-b border-slate-200/80 px-4 sm:px-6 pt-5 pb-1 w-full max-w-full overflow-hidden">
       {/* Business Meta Profile & Actions Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5">
         <div className="flex items-start sm:items-center space-x-3.5">
@@ -216,7 +216,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
       )}
 
       {/* Mobile Sub-Navigation Select Dropdown */}
-      <div className="sm:hidden pb-3 pt-1 border-t border-slate-100">
+      <div className="mobile-subtab-select-container sm:hidden pb-3 pt-1 border-t border-slate-100">
         <label htmlFor="mobile-subtab-select" className="sr-only">
           Select View
         </label>
@@ -241,7 +241,7 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
       </div>
 
       {/* Desktop Sub-Navigation Tabs */}
-      <div className="hidden sm:flex items-center space-x-1 overflow-x-auto no-scrollbar border-t border-slate-100 pt-1 -mb-px">
+      <div className="desktop-subtab-container hidden sm:flex items-center space-x-1 overflow-x-auto no-scrollbar border-t border-slate-100 pt-1 -mb-px">
         {tabs.map((tab) => {
           const isActive = activeSubTab === tab.id;
           return (
