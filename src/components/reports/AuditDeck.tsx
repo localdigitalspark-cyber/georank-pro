@@ -722,15 +722,21 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         {/* ========================================================================= */}
         {/* 1. SECTION: REVENUE POTENTIAL & RECOVERY FORECAST (MULTI-SCENARIO MODULE) */}
         {/* ========================================================================= */}
-        <div className="bg-gradient-to-br from-white via-slate-50/50 to-emerald-50/20 p-6 sm:p-7 rounded-2xl border-2 border-emerald-200/90 shadow-sm space-y-6 print:break-inside-avoid">
+        <div className="border-2 border-emerald-200/90 rounded-2xl bg-white p-5 sm:p-6 shadow-sm space-y-5 print:break-inside-avoid">
           {/* Header & Scenario Switcher Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <div className="flex items-center space-x-2 text-emerald-700">
-                <Calculator className="w-5 h-5 text-emerald-600 stroke-[2.5]" />
-                <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-900">
-                  Revenue Potential &amp; Recovery Forecast
-                </h2>
+              <div className="flex flex-wrap items-center gap-2 text-emerald-700">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-5 h-5 text-emerald-600 stroke-[2.5]" />
+                  <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-900">
+                    Revenue Potential &amp; Recovery Forecast
+                  </h2>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Calibrated Model</span>
+                </span>
               </div>
               <p className="text-xs text-slate-600 mt-1">
                 Simulate your projected business turnover recovered from local rivals by reclaiming Google 3-Pack positions.
@@ -766,8 +772,8 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
           </div>
 
-          {/* Interactive Impact Sliders (Dual Controls) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-2xs print:hidden">
+          {/* Interactive Impact Sliders (Dual Controls Top Sub-Bar) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-2xs print:hidden">
             {/* Slider 1: Average Value per Customer / Job */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
@@ -2395,6 +2401,71 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
           </div>
 
+          {/* Top Sub-Bar: Traffic Baseline Slider & Benchmark Recovery Pills */}
+          <div className="bg-slate-50/80 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2">
+                <Globe className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Monthly Traffic Baseline &amp; Recovery Benchmarks:
+                </span>
+              </div>
+
+              {/* Benchmark Pills: Conservative 25% / Expected 50% / Aggressive 75% */}
+              <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-slate-200/80 self-start sm:self-auto shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-400 px-1.5 hidden sm:inline">Benchmark:</span>
+                {[
+                  { label: 'Conservative 25%', visitors: 400 },
+                  { label: 'Expected 50%', visitors: 650 },
+                  { label: 'Aggressive 75%', visitors: 1200 },
+                ].map((item) => {
+                  const isActive = monthlySiteVisitors === item.visitors;
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => setMonthlySiteVisitors(item.visitors)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        isActive
+                          ? 'bg-amber-500 text-slate-950 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Monthly Site Visitors Slider */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+                  <span>Estimated Monthly Web &amp; Maps Visitors:</span>
+                </span>
+                <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                  {monthlySiteVisitors.toLocaleString()} visitors / month
+                </span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="3000"
+                step="50"
+                value={monthlySiteVisitors}
+                onChange={(e) => setMonthlySiteVisitors(parseInt(e.target.value) || 650)}
+                data-testid="slider-site-visitors"
+                className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 rounded-lg"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>100 visitors min</span>
+                <span className="text-slate-500 font-medium">Local organic, maps, and direct traffic</span>
+                <span>3,000 visitors max</span>
+              </div>
+            </div>
+          </div>
+
           {/* Executive Revenue Teaser (Headline Figure + Top 2 Urgent Bottlenecks) */}
           <div data-testid="executive-revenue-teaser" className="space-y-4">
             {/* Headline Opportunity Bleed Banner */}
@@ -2544,23 +2615,96 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                   className={`p-5 rounded-2xl border ${cardBorderClass} shadow-xs flex flex-col justify-between space-y-4 transition group`}
                 >
                   <div className="space-y-3">
-                    {/* Pillar Title & Status Badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center space-x-2">
-                        {pillar.id === 'websiteConversion' && <Globe className="w-4 h-4 text-emerald-600 shrink-0" />}
-                        {pillar.id === 'speedToLead' && <MessageSquare className="w-4 h-4 text-rose-600 shrink-0" />}
-                        {pillar.id === 'onlineBooking' && <Calendar className="w-4 h-4 text-blue-600 shrink-0" />}
-                        {pillar.id === 'reputation' && <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />}
-                        {pillar.id === 'retention' && <Repeat className="w-4 h-4 text-purple-600 shrink-0" />}
-                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                          {pillar.title}
-                        </h3>
+                    {/* Pillar Card Header: Title, Status Badge & Nested Fix Toggle */}
+                    <div className="space-y-2.5 border-b border-slate-100 pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          {pillar.id === 'websiteConversion' && <Globe className="w-4 h-4 text-emerald-600 shrink-0" />}
+                          {pillar.id === 'speedToLead' && <MessageSquare className="w-4 h-4 text-rose-600 shrink-0" />}
+                          {pillar.id === 'onlineBooking' && <Calendar className="w-4 h-4 text-blue-600 shrink-0" />}
+                          {pillar.id === 'reputation' && <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />}
+                          {pillar.id === 'retention' && <Repeat className="w-4 h-4 text-purple-600 shrink-0" />}
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                            {pillar.title}
+                          </h3>
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${statusColor}`}
+                        >
+                          {pillar.statusBadge}
+                        </span>
                       </div>
-                      <span
-                        className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${statusColor}`}
+
+                      {/* Nested Interactive Fix Toggle in Card Header */}
+                      <button
+                        type="button"
+                        onClick={() => handlePillarToggle(pillar.id, isFixed)}
+                        className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer select-none text-xs ${
+                          isFixed
+                            ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
                       >
-                        {pillar.statusBadge}
-                      </span>
+                        <span className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={isFixed}
+                            onChange={() => {}}
+                            className="w-3.5 h-3.5 rounded text-emerald-600 cursor-pointer pointer-events-none"
+                          />
+                          <span>{pillar.toggleLabel}</span>
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
+                            isFixed ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {isFixed ? 'ACTIVE' : 'PLUG LEAK'}
+                        </span>
+                      </button>
+
+                      {/* Embedded Pillar-Specific Slider if applicable */}
+                      {pillar.id === 'retention' && (
+                        <div className="pt-1.5 space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 font-medium">Customer Database:</span>
+                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {pastCustomerListSize.toLocaleString()} clients
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="200"
+                            max="5000"
+                            step="100"
+                            value={pastCustomerListSize}
+                            onChange={(e) => setPastCustomerListSize(parseInt(e.target.value) || 1200)}
+                            data-testid="slider-past-customers"
+                            className="w-full accent-purple-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+                      )}
+
+                      {pillar.id === 'reputation' && (
+                        <div className="pt-1.5 space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-600 font-medium">Review Velocity:</span>
+                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {reviewVelocityMonthly} reviews / mo
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="10"
+                            step="0.5"
+                            value={reviewVelocityMonthly}
+                            onChange={(e) => setReviewVelocityMonthly(parseFloat(e.target.value) || 2)}
+                            data-testid="slider-review-velocity"
+                            className="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Financial Loss / Recovery Callout */}
@@ -2606,26 +2750,6 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                       <span className="font-semibold text-slate-700 not-italic">Benchmark: </span>
                       {pillar.industryBenchmark}
                     </div>
-                  </div>
-
-                  {/* Toggle Checkbox */}
-                  <div className="pt-2 border-t border-slate-100">
-                    <label
-                      onClick={() => handlePillarToggle(pillar.id, isFixed)}
-                      className={`flex items-center space-x-2.5 p-2.5 rounded-xl cursor-pointer transition select-none ${
-                        isFixed
-                          ? 'bg-emerald-100/70 text-emerald-900 border border-emerald-300 font-bold'
-                          : 'bg-slate-100/70 hover:bg-slate-100 text-slate-700 border border-slate-200'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isFixed}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer shrink-0"
-                      />
-                      <span className="text-xs">{pillar.toggleLabel}</span>
-                    </label>
                   </div>
                 </div>
               );

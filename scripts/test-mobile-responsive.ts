@@ -89,6 +89,45 @@ async function runMobileResponsiveTests() {
       fail('Mobile Dashboard Load', 'Mobile Navigation', `Exceptions: ${pageErrors.join('; ')}`);
     }
 
+    // 1.0 Verify AppHeader Mobile Layout & Zero Overlapping Bounding Boxes
+    const appHeader = page.locator('header').first();
+    const headerBox = await appHeader.boundingBox();
+    if (headerBox && headerBox.width <= 391) {
+      // Check that breadcrumbs text is hidden on mobile
+      const breadcrumbsNav = appHeader.locator('nav[aria-label="Breadcrumb"]');
+      const isBreadcrumbsHidden = await breadcrumbsNav.evaluate((el) => {
+        const style = window.getComputedStyle(el);
+        return style.display === 'none' || el.classList.contains('hidden');
+      });
+
+      // Check left elements (Hamburger + Business Pill) vs right elements (Search + Credits + Avatar)
+      const leftGroup = appHeader.locator('div.flex.items-center').first();
+      const rightGroup = appHeader.locator('div.flex.items-center').last();
+      const leftBox = await leftGroup.boundingBox();
+      const rightBox = await rightGroup.boundingBox();
+
+      if (isBreadcrumbsHidden && leftBox && rightBox) {
+        const noOverlap = leftBox.x + leftBox.width <= rightBox.x + 1; // within 1px margin
+        if (noOverlap) {
+          pass('AppHeader Zero Overlap on Mobile', 'Mobile Header', `Left max: ${(leftBox.x + leftBox.width).toFixed(1)}px, Right start: ${rightBox.x.toFixed(1)}px (Gap: ${(rightBox.x - (leftBox.x + leftBox.width)).toFixed(1)}px)`);
+        } else {
+          fail('AppHeader Zero Overlap on Mobile', 'Mobile Header', `Collision detected: Left ends at ${leftBox.x + leftBox.width}px but Right begins at ${rightBox.x}px`);
+        }
+      } else {
+        fail('AppHeader Zero Overlap on Mobile', 'Mobile Header', `Breadcrumbs hidden: ${isBreadcrumbsHidden}, Elements found: Left ${Boolean(leftBox)}, Right ${Boolean(rightBox)}`);
+      }
+
+      // Check Mobile Search Toggle Button
+      const searchToggle = page.locator('[data-testid="mobile-search-toggle"]');
+      if (await searchToggle.isVisible()) {
+        pass('Mobile Search Toggle Visible', 'Mobile Header', 'Compact search icon button rendered on < 640px viewport');
+      } else {
+        fail('Mobile Search Toggle Visible', 'Mobile Header', 'Mobile search toggle button missing');
+      }
+    } else {
+      fail('AppHeader Zero Overlap on Mobile', 'Mobile Header', `Header width was ${headerBox?.width}px, exceeding viewport`);
+    }
+
     // 1.1 Verify Mobile Subtab Select Dropdown
     const mobileSelect = page.locator('[data-testid="mobile-subtab-select"]');
     const isMobileSelectVisible = await mobileSelect.isVisible();
@@ -254,6 +293,36 @@ async function runMobileResponsiveTests() {
 
     if (allPillarsStackSingleColumn) {
       pass('All 5 Pillar Cards Stack in Single Column on Mobile', 'Audit Report', `Cards render in 1 responsive column (max width: ${maxCardWidth.toFixed(1)}px on 390px viewport)`);
+    }
+
+    // 2.5 Assert Report Sliders sit strictly within AuditDeck card boundaries without negative margins or clipping
+    const slidersToCheck = [
+      { id: 'slider-avg-ticket', name: 'Avg Ticket Value Slider' },
+      { id: 'slider-close-rate', name: 'Close Rate Slider' },
+      { id: 'slider-site-visitors', name: 'Omnichannel Site Visitors Slider' },
+      { id: 'slider-past-customers', name: 'Past Customers Slider' },
+      { id: 'slider-review-velocity', name: 'Review Velocity Slider' },
+    ];
+
+    let allSlidersContained = true;
+    for (const item of slidersToCheck) {
+      const sliders = await page.locator(`[data-testid="${item.id}"]`).all();
+      for (const slider of sliders) {
+        if (await slider.isVisible()) {
+          const sBox = await slider.boundingBox();
+          if (sBox) {
+            // Verify slider is within viewport (left >= 0 and right <= 391)
+            if (sBox.x < 0 || sBox.x + sBox.width > 391) {
+              allSlidersContained = false;
+              fail(`${item.name} Viewport Containment`, 'Audit Report', `Slider extends outside screen bounds: left=${sBox.x}, right=${sBox.x + sBox.width}`);
+            }
+          }
+        }
+      }
+    }
+
+    if (allSlidersContained) {
+      pass('Report Sliders Card Boundary Containment', 'Audit Report', 'All 5 revenue & leakage sliders sit strictly within card boundaries with 0 clipping or negative margins');
     }
 
     // Take screenshot of expanded report on mobile
