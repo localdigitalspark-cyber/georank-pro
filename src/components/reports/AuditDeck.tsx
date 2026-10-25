@@ -32,6 +32,7 @@ import {
   trackScenarioChanged,
   trackCtaClicked,
   trackLeakageToggled,
+  trackLeakageExpanded,
 } from '../../lib/telemetry/prospect-telemetry.ts';
 import {
   calculateOmnichannelLeakage,
@@ -238,6 +239,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   const [retentionFixed, setRetentionFixed] = useState<boolean>(false);
 
   // Accordion & Info Toggles
+  const [isRevenueBreakdownExpanded, setIsRevenueBreakdownExpanded] = useState<boolean>(false);
   const [showOmnichannelControls, setShowOmnichannelControls] = useState<boolean>(true);
   const [showOmnichannelMethodology, setShowOmnichannelMethodology] = useState<boolean>(false);
 
@@ -514,6 +516,31 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         lostJobsMonthly: pillar?.lostJobsMonthly,
       }
     );
+  };
+
+  // Top 2 urgent bottlenecks for executive revenue teaser
+  const topUrgentBottlenecks = useMemo(() => {
+    const unfixed = omnichannelAuditReport.pillarList.filter((p) => !p.isFixed);
+    const candidates = unfixed.length >= 2 ? unfixed : omnichannelAuditReport.pillarList;
+    return [...candidates].sort((a, b) => b.monthlyLoss - a.monthlyLoss).slice(0, 2);
+  }, [omnichannelAuditReport.pillarList]);
+
+  // Handle accordion toggle with telemetry tracking
+  const handleToggleRevenueBreakdown = () => {
+    const nextState = !isRevenueBreakdownExpanded;
+    setIsRevenueBreakdownExpanded(nextState);
+    if (nextState) {
+      trackLeakageExpanded(
+        safeSummary.scanId || 'latest',
+        safeSummary.target.businessName || 'Local Business',
+        true,
+        {
+          totalMonthlyLoss: omnichannelAuditReport.totals.totalEstimatedMonthlyLoss,
+          totalAnnualRecoverable: omnichannelAuditReport.totals.totalAnnualRecoverableOpportunity,
+          topBottlenecks: topUrgentBottlenecks.map((b) => b.title),
+        }
+      );
+    }
   };
 
   // Core Trade Keywords for Multi-Keyword Opportunity Breakdown (top 4-5)
@@ -2368,8 +2395,130 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
           </div>
 
-          {/* 5-Pillar Interactive Card Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+          {/* Executive Revenue Teaser (Headline Figure + Top 2 Urgent Bottlenecks) */}
+          <div data-testid="executive-revenue-teaser" className="space-y-4">
+            {/* Headline Opportunity Bleed Banner */}
+            <div className="bg-gradient-to-r from-rose-50/80 via-amber-50/40 to-slate-50/60 p-4 sm:p-5 rounded-2xl border border-rose-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md inline-block">
+                  Executive Diagnosis • Leaky Bucket Summary
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                  Estimated {currencySymbol}{omnichannelAuditReport.totals.totalEstimatedMonthlyLoss.toLocaleString()} / month dropping through conversion bottlenecks
+                </h3>
+                <p className="text-xs text-slate-600 max-w-xl leading-relaxed">
+                  While search rankings drive local demand, conversion deficits prevent an estimated <strong className="text-slate-900 font-bold font-mono">~{omnichannelAuditReport.totals.totalLostJobsMonthly} qualified customer jobs</strong> every month from turning into booked revenue.
+                </p>
+              </div>
+
+              <div className="bg-white/95 p-3.5 rounded-xl border border-rose-200 shadow-2xs text-right shrink-0">
+                <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">
+                  Headline Lost Revenue
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-rose-700">
+                  -{currencySymbol}{omnichannelAuditReport.totals.totalEstimatedMonthlyLoss.toLocaleString()}
+                  <span className="text-xs font-normal text-slate-500"> / mo</span>
+                </span>
+                <span className="text-[11px] font-mono text-emerald-700 block font-bold mt-0.5">
+                  +{currencySymbol}{omnichannelAuditReport.totals.totalAnnualRecoverableOpportunity.toLocaleString()} / yr recoverable
+                </span>
+              </div>
+            </div>
+
+            {/* Top 2 Urgent Bottlenecks */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-600">
+                  Top 2 Urgent Bottlenecks Requiring Immediate Remediation:
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Ranked by lost customer volume
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {topUrgentBottlenecks.map((b, idx) => (
+                  <div
+                    key={b.id}
+                    data-testid={`top-bottleneck-${idx}`}
+                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white transition flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          {b.id === 'websiteConversion' && <Globe className="w-4 h-4 text-emerald-600 shrink-0" />}
+                          {b.id === 'speedToLead' && <MessageSquare className="w-4 h-4 text-rose-600 shrink-0" />}
+                          {b.id === 'onlineBooking' && <Calendar className="w-4 h-4 text-blue-600 shrink-0" />}
+                          {b.id === 'reputation' && <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />}
+                          {b.id === 'retention' && <Repeat className="w-4 h-4 text-purple-600 shrink-0" />}
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                            {b.title}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-200 shrink-0">
+                          {b.statusBadge}
+                        </span>
+                      </div>
+
+                      <div className="flex items-baseline justify-between bg-white p-2.5 rounded-lg border border-slate-200/80">
+                        <span className="text-[11px] font-medium text-slate-500">Revenue Drain:</span>
+                        <span className="text-sm font-black font-mono text-rose-700">
+                          -{currencySymbol}{b.monthlyLoss.toLocaleString()}{' '}
+                          <span className="text-[10px] font-normal text-slate-400">/ mo (~{b.lostJobsMonthly} jobs)</span>
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-slate-600 leading-relaxed flex items-start gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <span>{b.bullets[0]}</span>
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 italic">Recommended Agency Remedy:</span>
+                      <span className="font-semibold text-emerald-700">{b.shortTitle} Upgrade</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Interactive Accordion Gate Button */}
+            <div className="pt-2 flex flex-col items-center">
+              <button
+                type="button"
+                data-testid="expand-revenue-breakdown"
+                onClick={handleToggleRevenueBreakdown}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition shadow-xs cursor-pointer group"
+              >
+                <span>
+                  {isRevenueBreakdownExpanded
+                    ? '[ Hide Full 5-Pillar Breakdown ▲ ]'
+                    : '[ View Full 5-Pillar Breakdown & Opportunity Analysis ▼ ]'}
+                </span>
+                <span className="text-[10px] font-mono text-amber-700 bg-white/90 px-2 py-0.5 rounded-md border border-amber-200 font-semibold">
+                  {isRevenueBreakdownExpanded ? 'Collapse' : '5 Pillars & Recovery Roadmap'}
+                </span>
+              </button>
+              <span className="text-[11px] text-slate-400 mt-1 font-mono">
+                {isRevenueBreakdownExpanded
+                  ? 'All 5 omnichannel pillars, interactive switches, and recovery blueprint are shown below.'
+                  : 'Click above to inspect detailed formulas, interactive repair toggles, and implementation roadmap.'}
+              </span>
+            </div>
+          </div>
+
+          {/* Collapsible Full Breakdown: 5-Pillar Interactive Grid & Recovery Roadmap */}
+          <div
+            data-testid="omnichannel-full-breakdown"
+            className={
+              isRevenueBreakdownExpanded
+                ? 'space-y-6 pt-3 animate-in fade-in duration-200'
+                : 'hidden print:block print:space-y-6 print:pt-3'
+            }
+          >
+            {/* 5-Pillar Interactive Card Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
             {omnichannelAuditReport.pillarList.map((pillar) => {
               const isFixed = pillar.isFixed;
               const statusColor = isFixed
@@ -2563,6 +2712,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
           </div>
         </div>
+      </div>
 
         {/* 2. SECTION: The 3 Priority Fixes to Reclaim Your Area (Customer-Friendly Remedies) */}
         <div className="space-y-4 print:break-inside-avoid">

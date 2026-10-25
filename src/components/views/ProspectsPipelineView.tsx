@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   ChevronRight,
   UserCheck,
+  ChevronDown,
   X,
   Mail,
   Zap,
@@ -176,6 +177,18 @@ export const ProspectsPipelineView: React.FC<ProspectsPipelineViewProps> = ({
         );
       case 'report_shared':
         return <span>Copied public report link for stakeholder review</span>;
+      case 'leakage_expanded':
+        return (
+          <span>
+            High-intent audit exploration: <strong className="text-amber-800">Expanded Full 5-Pillar Breakdown &amp; Opportunity Analysis</strong>
+          </span>
+        );
+      case 'leakage_toggled':
+        return (
+          <span>
+            Simulated infrastructure repair on <strong className="text-purple-800">{evt.details?.pillarId || 'Digital Pillar'}</strong> ({evt.details?.isFixed ? 'Fixed' : 'Unfixed'})
+          </span>
+        );
       case 'dwell_ping':
         const secs = evt.details?.dwellSeconds || 0;
         return (
@@ -200,6 +213,10 @@ export const ProspectsPipelineView: React.FC<ProspectsPipelineViewProps> = ({
         return <Flame className="w-3.5 h-3.5 text-rose-600 fill-rose-600" />;
       case 'report_shared':
         return <Share2 className="w-3.5 h-3.5 text-amber-600" />;
+      case 'leakage_expanded':
+        return <ChevronDown className="w-3.5 h-3.5 text-amber-600" />;
+      case 'leakage_toggled':
+        return <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />;
       case 'dwell_ping':
         return <Clock className="w-3.5 h-3.5 text-purple-600" />;
       default:

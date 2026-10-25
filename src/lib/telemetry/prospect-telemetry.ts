@@ -192,6 +192,27 @@ export function trackLeakageToggled(
 }
 
 /**
+ * Fires leakage_expanded event when a prospect expands the full 5-pillar breakdown
+ */
+export function trackLeakageExpanded(
+  scanId: string,
+  businessName: string,
+  isExpanded: boolean,
+  details?: Record<string, any>
+) {
+  sendProspectEvent({
+    scanId,
+    businessName,
+    eventType: 'leakage_expanded',
+    details: {
+      isExpanded,
+      timestamp: new Date().toISOString(),
+      ...(details || {}),
+    },
+  });
+}
+
+/**
  * React Hook to track prospect dwell reading time
  */
 export function useProspectDwellTracker(scanId: string, businessName: string) {

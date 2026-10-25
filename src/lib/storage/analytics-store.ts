@@ -25,7 +25,8 @@ export type ProspectEventType =
   | 'cta_clicked'
   | 'report_shared'
   | 'dwell_ping'
-  | 'leakage_toggled';
+  | 'leakage_toggled'
+  | 'leakage_expanded';
 
 export interface ProspectEvent {
   id: string;
@@ -417,6 +418,7 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
     let lastCloseRate: number | undefined;
     let lastScenario: string | undefined;
     let lastCtaType: string | undefined;
+    let leakageExpandedCount = 0;
 
     for (const evt of bizEvents) {
       if (evt.eventType === 'report_opened') {
@@ -447,6 +449,8 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
         else if (ctaType === 'print_pdf') ctaBreakdown.printPdf++;
         else if (ctaType === 'serp_evidence') ctaBreakdown.serpEvidence++;
         else ctaBreakdown.custom++;
+      } else if (evt.eventType === 'leakage_expanded') {
+        leakageExpandedCount++;
       } else if (evt.eventType === 'dwell_ping') {
         const d = Number(evt.details?.dwellSeconds) || 0;
         if (d > maxDwellSeconds) {
@@ -465,17 +469,19 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
     // Dwell: up to 30 pts (>60s = 15pts, >120s = 30pts)
     // Sliders: up to 25 pts (10 pts per slider adjustment)
     // CTA: 20 pts per CTA click (up to 40 pts)
+    // Leakage Expanded: 25 pts (high intent breakdown exploration)
     const openScore = Math.min(25, openCount * 12);
     const dwellScore = Math.min(30, Math.round((maxDwellSeconds / 180) * 30));
     const sliderScore = Math.min(25, sliderTouches * 12);
     const ctaScore = Math.min(40, ctaCount * 20);
-    const engagementScore = Math.min(100, openScore + dwellScore + sliderScore + ctaScore);
+    const leakageScore = Math.min(25, leakageExpandedCount * 25);
+    const engagementScore = Math.min(100, openScore + dwellScore + sliderScore + ctaScore + leakageScore);
 
     // Heat tier & Status
     let heatTier: 'hot' | 'warm' | 'cold' = 'cold';
     let status: 'New Lead' | 'In Review' | 'Proposal Hot' | 'Contacted' = 'New Lead';
 
-    if (ctaCount > 0 || engagementScore >= 70) {
+    if (ctaCount > 0 || leakageExpandedCount > 0 || engagementScore >= 70) {
       heatTier = 'hot';
       status = 'Proposal Hot';
     } else if (openCount > 1 || maxDwellSeconds > 60 || sliderTouches > 0 || engagementScore >= 40) {
