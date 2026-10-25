@@ -311,31 +311,35 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
   return (
     <div className="space-y-3">
       {/* 1. Keyword Selector & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-xs mt-3 mb-2 overflow-visible relative z-30">
-        {/* Left: Active Keyword Dropdown + Discover Keywords Button */}
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
+      <div className="flex items-center justify-between gap-2 bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 shadow-xs mt-3 mb-2 overflow-visible relative z-30">
+        {/* Left: Active Keyword Dropdown (~60% on mobile) + Desktop Discover Keywords */}
+        <div className="w-[58%] sm:w-auto flex items-center gap-2 min-w-0">
           {/* Active Keyword Dropdown Menu */}
-          <div className="relative" ref={keywordDropdownRef}>
+          <div className="relative w-full sm:w-auto" ref={keywordDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setShowActionsDropdown(false);
                 setIsKeywordDropdownOpen(!isKeywordDropdownOpen);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none"
+              className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none"
               aria-expanded={isKeywordDropdownOpen}
               aria-haspopup="true"
             >
-              <Tag className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="truncate max-w-[170px] sm:max-w-[220px]">{currentKeywordObj.keyword}</span>
-              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 shrink-0">
-                {currentKeywordObj.top3Percentage}%
-              </span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                  isKeywordDropdownOpen ? 'rotate-180 text-white' : ''
-                }`}
-              />
+              <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                <Tag className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="truncate">{currentKeywordObj.keyword}</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
+                  {currentKeywordObj.top3Percentage}%
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                    isKeywordDropdownOpen ? 'rotate-180 text-white' : ''
+                  }`}
+                />
+              </div>
             </button>
 
             {/* Floating Dropdown Popover */}
@@ -440,7 +444,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
             )}
           </div>
 
-          {/* Discover Keywords (Traffic) Button */}
+          {/* Desktop Only: Discover Keywords (Traffic) Button */}
           <button
             type="button"
             onClick={(e) => {
@@ -449,7 +453,7 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
               setShowActionsDropdown(false);
               setIsDiscoveryModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none shrink-0"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer select-none shrink-0"
             title="Discover high-volume local keywords with real search traffic and CPC"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
@@ -457,27 +461,27 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
           </button>
         </div>
 
-        {/* Right: Action Plan & Actions Menu */}
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+        {/* Right: Actions Menu (~40% on mobile) & Desktop Action Plan */}
+        <div className="w-[40%] sm:w-auto flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
           {onOpenActionPlan && (
             <button
               type="button"
               onClick={onOpenActionPlan}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/70 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/70 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span>Action Plan</span>
             </button>
           )}
 
-          <div className="relative" ref={actionsDropdownRef}>
+          <div className="relative w-full sm:w-auto" ref={actionsDropdownRef}>
             <button
               type="button"
               onClick={() => {
                 setIsKeywordDropdownOpen(false);
                 setShowActionsDropdown(!showActionsDropdown);
               }}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer whitespace-nowrap"
             >
               <span>Actions</span>
               <MoreVertical className="w-3.5 h-3.5" />
@@ -485,6 +489,33 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
 
             {showActionsDropdown && (
               <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-xl border border-slate-200 shadow-xl py-1.5 z-50 text-xs">
+                {/* Mobile-Only Discovery & Action Plan Items */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowActionsDropdown(false);
+                    setIsDiscoveryModalOpen(true);
+                  }}
+                  className="sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-emerald-700 hover:bg-emerald-50 text-left transition cursor-pointer font-medium"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Discover Keywords</span>
+                </button>
+                {onOpenActionPlan && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionsDropdown(false);
+                      onOpenActionPlan();
+                    }}
+                    className="sm:hidden w-full flex items-center space-x-2 px-3 py-2 text-amber-700 hover:bg-amber-50 text-left transition cursor-pointer font-medium"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Action Plan</span>
+                  </button>
+                )}
+
                 {onReScan && (
                   <button
                     type="button"
@@ -573,8 +604,43 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
         </div>
       </div>
 
+      {/* Mobile-Only Slim 3-Card KPI Bar above Map Canvas */}
+      {scanSummary && (
+        <div data-testid="mobile-kpi-bar" className="sm:hidden grid grid-cols-3 gap-2 bg-white p-2 rounded-xl border border-slate-200/80 shadow-xs text-center">
+          <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-lg py-1.5 px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block truncate">
+              Avg SERP
+            </span>
+            <span className="text-sm font-black text-emerald-700 font-mono">
+              #{Number(scanSummary.averageRank).toFixed(1)}
+            </span>
+          </div>
+          <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-lg py-1.5 px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block truncate">
+              In-Pack
+            </span>
+            <span className="text-sm font-black text-emerald-700 font-mono">
+              {Number(scanSummary.top3Percentage).toFixed(1)}%
+            </span>
+          </div>
+          <div className="bg-rose-50/70 border border-rose-100/90 rounded-lg py-1.5 px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block truncate">
+              Red Zone
+            </span>
+            <span className="text-sm font-black text-rose-600 font-mono">
+              {Number(
+                scanSummary.redZonePercentage ??
+                  ((scanSummary.nodes.filter((n) => n.rank === null || n.rank >= 11).length /
+                    (scanSummary.totalNodes || 1)) *
+                    100)
+              ).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 2. Interactive Map Container with Floating Elements */}
-      <div className="relative w-full h-[620px] rounded-2xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-xs">
+      <div className="relative w-full h-[520px] sm:h-[620px] rounded-2xl overflow-hidden border border-slate-200/80 bg-slate-100 shadow-xs">
         {scanSummary ? (
           <MapContainer
             center={[scanSummary.center.lat, scanSummary.center.lng]}
@@ -633,9 +699,9 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
           </div>
         )}
 
-        {/* 3. Floating Details Card (Top-Left over Map) */}
+        {/* 3. Floating Details Card (Desktop only, Top-Left over Map) */}
         {scanSummary && (
-          <div className="absolute top-4 left-4 z-20 w-72 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden text-xs transition-all">
+          <div data-testid="desktop-floating-details" className="hidden sm:block absolute top-4 left-4 z-20 w-72 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl overflow-hidden text-xs transition-all">
             {/* Card Sub-Tabs */}
             <div className="flex border-b border-slate-200/80 bg-slate-50/70">
               <button

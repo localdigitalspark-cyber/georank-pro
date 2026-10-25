@@ -350,7 +350,7 @@ async function runAudit() {
       }
 
       // 3.4 Action Buttons
-      const ctaBtn = page.locator('a:has-text("Book a 15-Minute Strategy Call"), a:has-text("Strategy Call")').first();
+      const ctaBtn = page.locator('a:has-text("Book a 15-Minute Strategy Call")').first();
       const ctaVisible = await ctaBtn.isVisible();
       const planBtn = page.locator('a:has-text("Activate Full Visibility Plan")').first();
       const planVisible = await planBtn.isVisible();

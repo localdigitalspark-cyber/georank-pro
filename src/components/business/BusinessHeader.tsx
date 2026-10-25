@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   Trash2,
   AlertTriangle,
+  ChevronDown,
 } from 'lucide-react';
 
 export type BusinessSubTab =
@@ -214,8 +215,33 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
         </div>
       )}
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar border-t border-slate-100 pt-1 -mb-px">
+      {/* Mobile Sub-Navigation Select Dropdown */}
+      <div className="sm:hidden pb-3 pt-1 border-t border-slate-100">
+        <label htmlFor="mobile-subtab-select" className="sr-only">
+          Select View
+        </label>
+        <div className="relative">
+          <select
+            id="mobile-subtab-select"
+            data-testid="mobile-subtab-select"
+            value={activeSubTab}
+            onChange={(e) => onSelectSubTab(e.target.value as BusinessSubTab)}
+            className="w-full bg-slate-50 border border-slate-300 text-slate-800 text-xs font-semibold rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs appearance-none cursor-pointer pr-10"
+          >
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label} {tab.count !== undefined ? `(${tab.count})` : ''} {tab.isAi ? '✦ AI' : ''}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+            <ChevronDown className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sub-Navigation Tabs */}
+      <div className="hidden sm:flex items-center space-x-1 overflow-x-auto no-scrollbar border-t border-slate-100 pt-1 -mb-px">
         {tabs.map((tab) => {
           const isActive = activeSubTab === tab.id;
           return (
