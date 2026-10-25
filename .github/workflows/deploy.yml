@@ -1,0 +1,15 @@
+name: Trigger Render Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Render
+    steps:
+      - name: Trigger Webhook
+        run: |
+          curl -s -X POST "https://api.render.com/deploy/srv-dbedjdvb9u1s739bqo8g?key=PmnlNyHDcK4"
