@@ -213,6 +213,25 @@ export function trackLeakageExpanded(
 }
 
 /**
+ * Fires full_report_requested event when a prospect clicks the unlock gate on a Lite Teaser report
+ */
+export function trackFullReportRequested(
+  scanId: string,
+  businessName: string,
+  details?: Record<string, any>
+) {
+  sendProspectEvent({
+    scanId,
+    businessName,
+    eventType: 'full_report_requested',
+    details: {
+      timestamp: new Date().toISOString(),
+      ...(details || {}),
+    },
+  });
+}
+
+/**
  * React Hook to track prospect dwell reading time
  */
 export function useProspectDwellTracker(scanId: string, businessName: string) {

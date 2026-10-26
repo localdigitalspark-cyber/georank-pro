@@ -46,6 +46,7 @@ export interface ReportPageProps {
   audit?: LocalSeoAuditOutput;
   discoveredKeywords?: DiscoveredKeyword[];
   onBackToDashboard?: () => void;
+  tier?: 'full' | 'lite';
 }
 
 export const ReportPage: React.FC<ReportPageProps> = ({
@@ -54,11 +55,22 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   audit: propAudit,
   discoveredKeywords: propDiscoveredKeywords,
   onBackToDashboard,
+  tier: propTier,
 }) => {
   const { branding } = useBranding();
   const [copiedLink, setCopiedLink] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Parse initial tier from prop or URL (?tier=lite or ?mode=lite)
+  const initialTierFromUrl = typeof window !== 'undefined'
+    ? ((new URLSearchParams(window.location.search).get('tier') ||
+        new URLSearchParams(window.location.search).get('mode')) as 'full' | 'lite' | null)
+    : null;
+
+  const [currentTier, setCurrentTier] = useState<'full' | 'lite'>(
+    propTier || (initialTierFromUrl === 'lite' ? 'lite' : 'full')
+  );
 
   const [scanSummary, setScanSummary] = useState<GridScanSummary | null>(propSummary || null);
   const [audit, setAudit] = useState<LocalSeoAuditOutput | null>(propAudit || null);
@@ -150,8 +162,14 @@ export const ReportPage: React.FC<ReportPageProps> = ({
   }, [resolvedScanId, scanSummary?.target?.businessName]);
 
   const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    trackReportShared(resolvedScanId, currentBusinessName, 'clipboard_copy');
+    let shareLink = window.location.href;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tier', currentTier);
+      shareLink = url.toString();
+    } catch {}
+    navigator.clipboard.writeText(shareLink);
+    trackReportShared(resolvedScanId, currentBusinessName, `clipboard_copy_${currentTier}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
@@ -261,7 +279,20 @@ export const ReportPage: React.FC<ReportPageProps> = ({
         </div>
 
         {/* Main Audit Deck with Executive Summary, Revenue Calculator, Action Plan & CTA */}
-        <AuditDeck audit={audit} scanSummary={scanSummary} discoveredKeywords={discoveredKeywords} />
+        <AuditDeck
+          audit={audit}
+          scanSummary={scanSummary}
+          discoveredKeywords={discoveredKeywords}
+          tier={currentTier}
+          onTierChange={(newTier) => {
+            setCurrentTier(newTier);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.set('tier', newTier);
+              window.history.replaceState({}, '', url.toString());
+            } catch {}
+          }}
+        />
       </div>
     </div>
   );

@@ -26,7 +26,8 @@ export type ProspectEventType =
   | 'report_shared'
   | 'dwell_ping'
   | 'leakage_toggled'
-  | 'leakage_expanded';
+  | 'leakage_expanded'
+  | 'full_report_requested';
 
 export interface ProspectEvent {
   id: string;
@@ -419,6 +420,7 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
     let lastScenario: string | undefined;
     let lastCtaType: string | undefined;
     let leakageExpandedCount = 0;
+    let fullReportRequestedCount = 0;
 
     for (const evt of bizEvents) {
       if (evt.eventType === 'report_opened') {
@@ -451,6 +453,9 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
         else ctaBreakdown.custom++;
       } else if (evt.eventType === 'leakage_expanded') {
         leakageExpandedCount++;
+      } else if (evt.eventType === 'full_report_requested') {
+        fullReportRequestedCount++;
+        ctaCount++;
       } else if (evt.eventType === 'dwell_ping') {
         const d = Number(evt.details?.dwellSeconds) || 0;
         if (d > maxDwellSeconds) {
@@ -468,12 +473,12 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
     // Opens: up to 25 pts (10 pts per open)
     // Dwell: up to 30 pts (>60s = 15pts, >120s = 30pts)
     // Sliders: up to 25 pts (10 pts per slider adjustment)
-    // CTA: 20 pts per CTA click (up to 40 pts)
+    // CTA / Full Report Request: 20-40 pts per action
     // Leakage Expanded: 25 pts (high intent breakdown exploration)
     const openScore = Math.min(25, openCount * 12);
     const dwellScore = Math.min(30, Math.round((maxDwellSeconds / 180) * 30));
     const sliderScore = Math.min(25, sliderTouches * 12);
-    const ctaScore = Math.min(40, ctaCount * 20);
+    const ctaScore = Math.min(40, (ctaCount + fullReportRequestedCount * 2) * 20);
     const leakageScore = Math.min(25, leakageExpandedCount * 25);
     const engagementScore = Math.min(100, openScore + dwellScore + sliderScore + ctaScore + leakageScore);
 
@@ -481,7 +486,7 @@ export function getProspectAnalyticsSummary(): ProspectAnalyticsSummary {
     let heatTier: 'hot' | 'warm' | 'cold' = 'cold';
     let status: 'New Lead' | 'In Review' | 'Proposal Hot' | 'Contacted' = 'New Lead';
 
-    if (ctaCount > 0 || leakageExpandedCount > 0 || engagementScore >= 70) {
+    if (fullReportRequestedCount > 0 || ctaCount > 0 || leakageExpandedCount > 0 || engagementScore >= 70) {
       heatTier = 'hot';
       status = 'Proposal Hot';
     } else if (openCount > 1 || maxDwellSeconds > 60 || sliderTouches > 0 || engagementScore >= 40) {

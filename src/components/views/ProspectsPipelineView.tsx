@@ -37,6 +37,7 @@ import {
   X,
   Mail,
   Zap,
+  Lock,
 } from 'lucide-react';
 import type {
   ProspectAnalyticsSummary,
@@ -183,6 +184,15 @@ export const ProspectsPipelineView: React.FC<ProspectsPipelineViewProps> = ({
             High-intent audit exploration: <strong className="text-amber-800">Expanded Full 5-Pillar Breakdown &amp; Opportunity Analysis</strong>
           </span>
         );
+      case 'full_report_requested':
+        return (
+          <span>
+            🔥 High-intent inbound request: <strong className="text-rose-700">Requested Full Revenue &amp; Operational Audit</strong>
+            {evt.details?.email && (
+              <span className="text-slate-500 text-[11px] ml-1">({evt.details.email})</span>
+            )}
+          </span>
+        );
       case 'leakage_toggled':
         return (
           <span>
@@ -215,6 +225,8 @@ export const ProspectsPipelineView: React.FC<ProspectsPipelineViewProps> = ({
         return <Share2 className="w-3.5 h-3.5 text-amber-600" />;
       case 'leakage_expanded':
         return <ChevronDown className="w-3.5 h-3.5 text-amber-600" />;
+      case 'full_report_requested':
+        return <Lock className="w-3.5 h-3.5 text-rose-600" />;
       case 'leakage_toggled':
         return <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />;
       case 'dwell_ping':
