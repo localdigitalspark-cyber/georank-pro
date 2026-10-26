@@ -10,9 +10,9 @@
 import fs from 'fs';
 import path from 'path';
 import { resolveStorageDir, atomicWriteJsonSync, deleteScansForBusiness } from './scan-store.ts';
-import type { TrackingFrequency, KeywordTrackingConfig, RankingDelta } from '../types.ts';
+import type { TrackingFrequency, KeywordTrackingConfig, RankingDelta, KeywordDelta } from '../types.ts';
 
-export type { TrackingFrequency, KeywordTrackingConfig, RankingDelta };
+export type { TrackingFrequency, KeywordTrackingConfig, RankingDelta, KeywordDelta };
 
 export function calculateNextTrackDue(frequency: TrackingFrequency, fromDate = new Date()): string | undefined {
   if (frequency === 'off') return undefined;
@@ -67,6 +67,7 @@ export interface ManagedBusiness {
   keywordsTracking?: Record<string, KeywordTrackingConfig>;
   latestDelta?: RankingDelta;
   rankingDeltas?: Record<string, RankingDelta>;
+  keywordDeltas?: Record<string, KeywordDelta>;
   webhookUrl?: string;
   alertEmail?: string;
   createdAt: string;
@@ -122,6 +123,44 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
       nodesDropped: 1,
       nodesUnchanged: 17,
     },
+    keywordDeltas: {
+      'Emergency Plumber': {
+        keyword: 'Emergency Plumber',
+        avgSerpDelta: 1.8,
+        inPackDelta: 12.0,
+        previousAvgSerp: 6.0,
+        currentAvgSerp: 4.2,
+        lastScannedAt: new Date().toISOString(),
+        badgeText: '▲ +1.8',
+        isPositive: true,
+        isNegative: false,
+        status: 'improved',
+      },
+      'Drain Cleaning': {
+        keyword: 'Drain Cleaning',
+        avgSerpDelta: 0.8,
+        inPackDelta: 8.0,
+        previousAvgSerp: 5.6,
+        currentAvgSerp: 4.8,
+        lastScannedAt: new Date(Date.now() - 86400000).toISOString(),
+        badgeText: '▲ +0.8',
+        isPositive: true,
+        isNegative: false,
+        status: 'improved',
+      },
+      'Water Heater Repair': {
+        keyword: 'Water Heater Repair',
+        avgSerpDelta: -0.6,
+        inPackDelta: -4.0,
+        previousAvgSerp: 6.8,
+        currentAvgSerp: 7.4,
+        lastScannedAt: new Date(Date.now() - 172800000).toISOString(),
+        badgeText: '▼ -0.6',
+        isPositive: false,
+        isNegative: true,
+        status: 'dropped',
+      },
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -168,6 +207,32 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
       nodesImproved: 2,
       nodesDropped: 6,
       nodesUnchanged: 17,
+    },
+    keywordDeltas: {
+      'Hair Colour Salon': {
+        keyword: 'Hair Colour Salon',
+        avgSerpDelta: -1.6,
+        inPackDelta: -8.0,
+        previousAvgSerp: 13.2,
+        currentAvgSerp: 14.8,
+        lastScannedAt: new Date(Date.now() - 86400000).toISOString(),
+        badgeText: '▼ -1.6',
+        isPositive: false,
+        isNegative: true,
+        status: 'dropped',
+      },
+      'Balayage Austin': {
+        keyword: 'Balayage Austin',
+        avgSerpDelta: 0.5,
+        inPackDelta: 4.0,
+        previousAvgSerp: 11.2,
+        currentAvgSerp: 10.7,
+        lastScannedAt: new Date(Date.now() - 172800000).toISOString(),
+        badgeText: '▲ +0.5',
+        isPositive: true,
+        isNegative: false,
+        status: 'improved',
+      },
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -238,6 +303,7 @@ function initBusinessStorage() {
                 ...b,
                 trackingConfig: b.trackingConfig || defaultMatch?.trackingConfig,
                 latestDelta: b.latestDelta || defaultMatch?.latestDelta,
+                keywordDeltas: b.keywordDeltas || defaultMatch?.keywordDeltas,
                 reviewCount: typeof b.reviewCount === 'number' ? b.reviewCount : (b.reviews || 0),
               });
             }
@@ -332,6 +398,7 @@ export function saveBusiness(data: {
   keywordsTracking?: Record<string, KeywordTrackingConfig>;
   latestDelta?: RankingDelta;
   rankingDeltas?: Record<string, RankingDelta>;
+  keywordDeltas?: Record<string, KeywordDelta>;
   webhookUrl?: string;
   alertEmail?: string;
 }): ManagedBusiness {

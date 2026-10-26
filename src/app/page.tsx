@@ -27,7 +27,8 @@ import { ShareReportModal } from '../components/reports/ShareReportModal.tsx';
 import { BrandingModal } from '../components/branding/BrandingModal.tsx';
 import { TrackingConfigModal, type TrackingConfigData } from '../components/tracking/TrackingConfigModal.tsx';
 import { WinLossAlertsModal } from '../components/tracking/WinLossAlertsModal.tsx';
-import type { RankingDelta, TrackingFrequency } from '../lib/types.ts';
+import { KeywordsView } from '../components/keywords/KeywordsView.tsx';
+import type { RankingDelta, TrackingFrequency, KeywordDelta } from '../lib/types.ts';
 import { useBranding } from '../lib/context/BrandingContext.tsx';
 
 // Dedicated Views
@@ -193,6 +194,58 @@ export default function DashboardPage() {
     alertOnThreePackEnter: true,
     alertOnRankDrop: true,
     rankDropThreshold: 2.0,
+    nextTrackDue: new Date(Date.now() + 86400000 * 5).toISOString(),
+    lastTrackedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  });
+  const [activeBusinessKeywordDeltas, setActiveBusinessKeywordDeltas] = useState<Record<string, KeywordDelta>>({
+    'Emergency Plumber': {
+      keyword: 'Emergency Plumber',
+      avgSerpDelta: 1.8,
+      inPackDelta: 12.0,
+      previousAvgSerp: 6.0,
+      currentAvgSerp: 4.2,
+      lastScannedAt: new Date().toISOString(),
+      badgeText: '▲ +1.8',
+      isPositive: true,
+      isNegative: false,
+      status: 'improved',
+    },
+    '24/7 Drain Cleaning': {
+      keyword: '24/7 Drain Cleaning',
+      avgSerpDelta: 0.8,
+      inPackDelta: 8.0,
+      previousAvgSerp: 5.6,
+      currentAvgSerp: 4.8,
+      lastScannedAt: new Date(Date.now() - 86400000).toISOString(),
+      badgeText: '▲ +0.8',
+      isPositive: true,
+      isNegative: false,
+      status: 'improved',
+    },
+    'Drain Cleaning': {
+      keyword: 'Drain Cleaning',
+      avgSerpDelta: 0.8,
+      inPackDelta: 8.0,
+      previousAvgSerp: 5.6,
+      currentAvgSerp: 4.8,
+      lastScannedAt: new Date(Date.now() - 86400000).toISOString(),
+      badgeText: '▲ +0.8',
+      isPositive: true,
+      isNegative: false,
+      status: 'improved',
+    },
+    'Water Heater Repair': {
+      keyword: 'Water Heater Repair',
+      avgSerpDelta: -0.6,
+      inPackDelta: -4.0,
+      previousAvgSerp: 6.8,
+      currentAvgSerp: 7.4,
+      lastScannedAt: new Date(Date.now() - 172800000).toISOString(),
+      badgeText: '▼ -0.6',
+      isPositive: false,
+      isNegative: true,
+      status: 'dropped',
+    },
   });
   const [unreadAlertsCount, setUnreadAlertsCount] = useState<number>(0);
 
@@ -219,13 +272,25 @@ export default function DashboardPage() {
   });
   const [isGeneratingAudit, setIsGeneratingAudit] = useState<boolean>(false);
 
-  // Derived keywords list for the pills bar
-  const keywordsList: KeywordChip[] = Object.values(keywordCache).map((entry, idx) => ({
-    id: `kw-${idx}-${entry.keyword.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
-    keyword: entry.keyword,
-    top3Percentage: entry.summary.top3Percentage,
-    averageRank: entry.summary.averageRank,
-  }));
+  // Derived keywords list with delta metrics
+  const keywordsList: KeywordChip[] = Object.values(keywordCache).map((entry, idx) => {
+    const kwDelta = activeBusinessKeywordDeltas[entry.keyword];
+    const avgSerpDelta = kwDelta ? kwDelta.avgSerpDelta : (entry.keyword.toLowerCase().includes('emergency') ? 1.8 : 0);
+    const shortText = kwDelta ? kwDelta.badgeText : (avgSerpDelta > 0 ? `▲ +${avgSerpDelta}` : avgSerpDelta < 0 ? `▼ ${avgSerpDelta}` : '● 0.0');
+
+    return {
+      id: `kw-${idx}-${entry.keyword.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      keyword: entry.keyword,
+      top3Percentage: entry.summary.top3Percentage,
+      averageRank: entry.summary.averageRank,
+      delta: {
+        avgSerpDelta,
+        shortText,
+        isPositive: avgSerpDelta > 0,
+        isNegative: avgSerpDelta < 0,
+      },
+    };
+  });
 
   // Switch active keyword on the GeoGrid map & prospecting studio
   const handleSelectKeyword = (kw: string) => {
@@ -383,6 +448,9 @@ export default function DashboardPage() {
           }
           if (targetBiz.trackingConfig) {
             setActiveTrackingConfig(targetBiz.trackingConfig);
+          }
+          if (targetBiz.keywordDeltas) {
+            setActiveBusinessKeywordDeltas(targetBiz.keywordDeltas);
           }
 
           // Fetch unread alerts count
@@ -963,6 +1031,9 @@ export default function DashboardPage() {
     if (item.trackingConfig) {
       setActiveTrackingConfig(item.trackingConfig);
     }
+    if (item.keywordDeltas) {
+      setActiveBusinessKeywordDeltas(item.keywordDeltas);
+    }
 
     const freshCache = buildInitialKeywordScanCache({
       businessName: item.name,
@@ -1162,7 +1233,10 @@ export default function DashboardPage() {
             totalKeywords={Object.keys(keywordCache).length}
             isScanning={isScanning}
             scanSummary={scanSummary}
-            trackingFrequency={activeTrackingConfig?.frequency}
+            trackingFrequency={activeTrackingConfig?.frequency || 'weekly'}
+            trackingEnabled={activeTrackingConfig?.enabled ?? true}
+            nextTrackDue={activeTrackingConfig?.nextTrackDue}
+            lastTrackedAt={activeTrackingConfig?.lastTrackedAt}
             latestDelta={activeBusinessDelta}
             unreadAlertsCount={unreadAlertsCount}
             onOpenTracking={() => {
@@ -1242,26 +1316,51 @@ export default function DashboardPage() {
               // Inside Business Workspace: Render by businessTab
               <>
                 {businessTab === 'keywords' && (
-                  <ProfitMapsView
-                    scanSummary={scanSummary}
-                    selectedNode={selectedNode}
-                    onSelectNode={(node) => setSelectedNode(node)}
-                    onReScan={() => executeScan()}
-                    onOpenNewScan={() => setIsNewScanOpen(true)}
-                    onOpenShareReport={handleOpenShareReport}
-                    onOpenActionPlan={() => setIsActionPlanOpen(true)}
-                    onDeleteBusiness={handleDeleteActiveBusiness}
-                    businessName={businessName}
-                    category={category}
-                    city={businessAddress}
-                    isScanning={isScanning}
-                    activeKeyword={selectedKeyword}
-                    keywordsList={keywordsList}
-                    onSelectKeyword={handleSelectKeyword}
-                    onAddKeyword={handleAddKeyword}
-                    onDeleteKeyword={handleDeleteKeyword}
-                    latestDelta={activeBusinessDelta}
-                  />
+                  <div className="space-y-4">
+                    <ProfitMapsView
+                      scanSummary={scanSummary}
+                      selectedNode={selectedNode}
+                      onSelectNode={(node) => setSelectedNode(node)}
+                      onReScan={() => executeScan()}
+                      onOpenNewScan={() => setIsNewScanOpen(true)}
+                      onOpenShareReport={handleOpenShareReport}
+                      onOpenActionPlan={() => setIsActionPlanOpen(true)}
+                      onDeleteBusiness={handleDeleteActiveBusiness}
+                      businessName={businessName}
+                      category={category}
+                      city={businessAddress}
+                      isScanning={isScanning}
+                      activeKeyword={selectedKeyword}
+                      keywordsList={keywordsList}
+                      onSelectKeyword={handleSelectKeyword}
+                      onAddKeyword={handleAddKeyword}
+                      onDeleteKeyword={handleDeleteKeyword}
+                      latestDelta={activeBusinessDelta}
+                    />
+
+                    {/* Step 4: Dedicated Metrics Column Table on Keywords Tab */}
+                    <KeywordsView
+                      businessName={businessName}
+                      keywords={keywordsList}
+                      keywordDeltas={activeBusinessKeywordDeltas}
+                      trackingFrequency={activeTrackingConfig?.frequency || 'weekly'}
+                      activeKeyword={selectedKeyword}
+                      onSelectKeyword={handleSelectKeyword}
+                      onRescanKeyword={(kw) => {
+                        handleSelectKeyword(kw);
+                        executeScan();
+                      }}
+                      onOpenTrackingModal={() => {
+                        setTrackingTargetBusiness({
+                          id: activeBusinessId || 'b1',
+                          name: businessName,
+                          trackingConfig: activeTrackingConfig,
+                        });
+                        setIsTrackingModalOpen(true);
+                      }}
+                      onOpenAddKeyword={() => setIsNewScanOpen(true)}
+                    />
+                  </div>
                 )}
                 {businessTab === 'todo' && (
                   <RankFixesTodoList

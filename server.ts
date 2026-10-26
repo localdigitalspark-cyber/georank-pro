@@ -20,6 +20,7 @@ import { generateGeoGrid } from './src/lib/geo/grid-generator.ts';
 import { buildInitialKeywordScanCache } from './src/lib/geo/keyword-scans.ts';
 import { scanGridNode, summarizeGridScan, isDataForSeoConfigured } from './src/lib/serp/adapter.ts';
 import { saveScan, getScan, listScans, getScansForBusiness, deleteScansForBusiness } from './src/lib/storage/scan-store.ts';
+import { computeSequentialKeywordDeltas } from './src/lib/tracking/ranking-delta.ts';
 import {
   saveProspectEvent,
   listProspectEvents,
@@ -526,12 +527,43 @@ app.get('/api/geo/autocomplete', async (req: Request, res: Response) => {
 /* BUSINESS LIFECYCLE & MULTI-SOURCE IMPORT API                             */
 /* ========================================================================= */
 
+function enrichBusinessWithDeltas(b: ManagedBusiness): ManagedBusiness {
+  const scans = getScansForBusiness(b.id);
+  const computedDeltas = computeSequentialKeywordDeltas(scans as any);
+  const keywordDeltas = { ...b.keywordDeltas, ...computedDeltas };
+
+  // If business has latest delta or active keyword delta, ensure consistent latestDelta
+  const activeKw = b.keyword || Object.keys(keywordDeltas)[0];
+  const activeKwDelta = activeKw ? keywordDeltas[activeKw] : undefined;
+
+  let latestDelta = b.latestDelta;
+  if (!latestDelta && activeKwDelta) {
+    latestDelta = {
+      avgSerpDelta: activeKwDelta.avgSerpDelta,
+      inPackDelta: activeKwDelta.inPackDelta,
+      enteredThreePack: activeKwDelta.avgSerpDelta >= 1.5,
+      droppedFromThreePack: activeKwDelta.avgSerpDelta <= -1.5,
+      currentAvgSerp: activeKwDelta.currentAvgSerp,
+      previousAvgSerp: activeKwDelta.previousAvgSerp,
+      currentTop3Percentage: b.top3Percentage,
+      currentScanDate: 'Today',
+      netGridMovement: activeKwDelta.status === 'improved' ? 'improved' : activeKwDelta.status === 'dropped' ? 'dropped' : 'stable',
+    };
+  }
+
+  return {
+    ...b,
+    keywordDeltas,
+    latestDelta,
+  };
+}
+
 /**
  * List all managed businesses
  */
 app.get('/api/businesses', (_req: Request, res: Response) => {
   try {
-    const list = listBusinesses();
+    const list = listBusinesses().map(enrichBusinessWithDeltas);
     res.json({ success: true, count: list.length, businesses: list });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed listing businesses' });
@@ -547,7 +579,7 @@ app.get('/api/businesses/:id', (req: Request, res: Response) => {
     if (!b) {
       return res.status(404).json({ success: false, error: 'Business not found' });
     }
-    res.json({ success: true, business: b });
+    res.json({ success: true, business: enrichBusinessWithDeltas(b) });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed retrieving business' });
   }

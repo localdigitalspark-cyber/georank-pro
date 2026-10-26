@@ -58,6 +58,9 @@ export interface BusinessHeaderProps {
   isScanning?: boolean;
   scanSummary?: GridScanSummary | null;
   trackingFrequency?: TrackingFrequency;
+  trackingEnabled?: boolean;
+  nextTrackDue?: string;
+  lastTrackedAt?: string;
   latestDelta?: RankingDelta;
   unreadAlertsCount?: number;
   onOpenTracking?: () => void;
@@ -78,6 +81,9 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
   isScanning = false,
   scanSummary,
   trackingFrequency,
+  trackingEnabled = true,
+  nextTrackDue,
+  lastTrackedAt,
   latestDelta,
   unreadAlertsCount = 0,
   onOpenTracking,
@@ -130,6 +136,23 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
                 <span className={`w-1.5 h-1.5 rounded-full ${metrics.operationalBadge.dotClass}`} />
                 <span>{metrics.operationalBadge.label}</span>
               </span>
+
+              {/* 1. Beside Business Name & Centroid: Tracking Status Pill */}
+              {trackingFrequency && trackingFrequency !== 'off' ? (
+                <span
+                  data-testid="header-tracking-status-pill"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 capitalize"
+                >
+                  <span>⏱️ Tracking: {trackingFrequency}</span>
+                </span>
+              ) : (
+                <span
+                  data-testid="header-tracking-status-pill"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200"
+                >
+                  <span>⏱️ Tracking Off</span>
+                </span>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-600">
@@ -138,28 +161,41 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
                 <span className="truncate max-w-[200px] sm:max-w-xs">{address}</span>
               </span>
               <span>•</span>
-              <span className="font-semibold text-slate-700">
-                Avg Rank: <strong className="text-rose-600">{metrics.formattedRank}</strong>
+              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                <span>Avg Rank: <strong className="text-rose-600">{metrics.formattedRank}</strong></span>
+                {/* Delta Badge immediately following Avg Rank */}
+                {(() => {
+                  const deltaBadge = formatDeltaBadge(latestDelta);
+                  const isPos = deltaBadge.isPositive;
+                  const isNeg = deltaBadge.isNegative;
+                  const colorCls = isPos
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    : isNeg
+                    ? 'text-rose-700 bg-rose-50 border-rose-200'
+                    : 'text-slate-600 bg-slate-100 border-slate-200';
+                  return (
+                    <span
+                      data-testid="header-delta-badge"
+                      className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 font-mono ${colorCls}`}
+                      title={deltaBadge.text}
+                    >
+                      <span>{deltaBadge.shortText}</span>
+                    </span>
+                  );
+                })()}
               </span>
               <span>•</span>
               <span className="font-semibold text-slate-700">
                 Top 3: <strong className="text-emerald-600">{metrics.formattedTop3}</strong>
               </span>
-              {latestDelta && (() => {
-                const deltaBadge = formatDeltaBadge(latestDelta);
-                return (
-                  <>
-                    <span>•</span>
-                    <span
-                      data-testid="header-delta-badge"
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${deltaBadge.colorClass}`}
-                      title={deltaBadge.text}
-                    >
-                      {deltaBadge.text}
-                    </span>
-                  </>
-                );
-              })()}
+              <span>•</span>
+              <span
+                data-testid="header-next-check"
+                className="text-xs text-slate-400"
+                title={lastTrackedAt ? `Last tracked: ${new Date(lastTrackedAt).toLocaleString()}` : 'Automated schedule'}
+              >
+                Next check: {nextTrackDue ? new Date(nextTrackDue).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Nov 2'}
+              </span>
             </div>
           </div>
         </div>

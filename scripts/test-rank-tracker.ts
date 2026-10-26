@@ -116,16 +116,28 @@ async function runRankTrackerVerification() {
     console.log('✓ [PASS] Saved tracking settings successfully.');
 
     // 4. Enter Business Workspace & Verify BusinessHeader Delta Badge & Alerts
-    console.log('\n--- Step 4: Workspace BusinessHeader Delta Badge & Alerts Button ---');
+    console.log('\n--- Step 4: Workspace BusinessHeader Tracking Metrics & Alerts ---');
     const b1Card = page.locator('h3:has-text("Austin Premier Plumbing")').first();
     await b1Card.click();
     await page.waitForTimeout(1000);
+
+    // Verify Business Header Tracking Status Pill
+    const headerTrackingPill = page.locator('[data-testid="header-tracking-status-pill"]').first();
+    await headerTrackingPill.waitFor({ state: 'visible', timeout: 5000 });
+    const pillText = await headerTrackingPill.textContent();
+    console.log(`✓ [PASS] BusinessHeader Tracking Status Pill: "${pillText?.trim()}"`);
 
     // Verify Business Header Delta Badge
     const headerDeltaBadge = page.locator('[data-testid="header-delta-badge"]').first();
     await headerDeltaBadge.waitFor({ state: 'visible', timeout: 5000 });
     const headerDeltaText = await headerDeltaBadge.textContent();
     console.log(`✓ [PASS] BusinessHeader Delta Badge rendered: "${headerDeltaText?.trim()}"`);
+
+    // Verify Next Check Tooltip
+    const headerNextCheck = page.locator('[data-testid="header-next-check"]').first();
+    await headerNextCheck.waitFor({ state: 'visible', timeout: 5000 });
+    const nextCheckText = await headerNextCheck.textContent();
+    console.log(`✓ [PASS] BusinessHeader Next Check Tooltip: "${nextCheckText?.trim()}"`);
 
     // Verify Alerts Button in BusinessHeader
     const alertsBtn = page.locator('[data-testid="header-alerts-btn"]').first();
@@ -134,10 +146,37 @@ async function runRankTrackerVerification() {
 
     // Verify Active Keyword Delta Badge in ProfitMapsView
     const activeKwDeltaBadge = page.locator('[data-testid="active-keyword-delta-badge"]').first();
-    if (await activeKwDeltaBadge.isVisible()) {
-      const kwDeltaText = await activeKwDeltaBadge.textContent();
-      console.log(`✓ [PASS] Active Keyword Delta Badge visible: "${kwDeltaText?.trim()}"`);
-    }
+    await activeKwDeltaBadge.waitFor({ state: 'visible', timeout: 5000 });
+    const kwDeltaText = await activeKwDeltaBadge.textContent();
+    console.log(`✓ [PASS] Active Keyword Delta Badge visible: "${kwDeltaText?.trim()}"`);
+
+    // Click keyword dropdown to verify 3-column rows
+    console.log('\n--- Step 4b: ProfitMapsView 3-Column Keyword Dropdown ---');
+    const kwDropdownBtn = page.locator('button:has([data-testid="active-keyword-delta-badge"])').first();
+    await kwDropdownBtn.click();
+    await page.waitForTimeout(400);
+
+    const firstDropdownItem = page.locator('[data-testid^="keyword-dropdown-item-"]').first();
+    await firstDropdownItem.waitFor({ state: 'visible', timeout: 4000 });
+    const firstItemDelta = page.locator('[data-testid^="keyword-delta-badge-"]').first();
+    await firstItemDelta.waitFor({ state: 'visible', timeout: 4000 });
+    const dropdownDeltaVal = await firstItemDelta.textContent();
+    console.log(`✓ [PASS] Dropdown 3-Column Delta Badge: "${dropdownDeltaVal?.trim()}"`);
+
+    // Close dropdown
+    await kwDropdownBtn.click();
+    await page.waitForTimeout(300);
+
+    // Verify Dedicated Keywords Metrics Table on Keywords Tab
+    console.log('\n--- Step 4c: Dedicated Keywords Metrics Table (KeywordsView) ---');
+    const keywordsTable = page.locator('[data-testid="keywords-table"]').first();
+    await keywordsTable.waitFor({ state: 'visible', timeout: 5000 });
+    console.log('✓ [PASS] Keywords metrics table is visible.');
+
+    const tableDeltaBadge = page.locator('[data-testid^="keyword-table-delta-"]').first();
+    await tableDeltaBadge.waitFor({ state: 'visible', timeout: 5000 });
+    const tableDeltaVal = await tableDeltaBadge.textContent();
+    console.log(`✓ [PASS] Table row 30-Day Movement Delta Badge: "${tableDeltaVal?.trim()}"`);
 
     // 5. Open Win/Loss Alerts Modal
     console.log('\n--- Step 5: Win/Loss Volatility Alerts Modal ---');

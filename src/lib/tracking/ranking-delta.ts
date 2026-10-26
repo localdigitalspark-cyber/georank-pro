@@ -10,7 +10,7 @@
  */
 
 import type { GridScanSummary } from '../serp/adapter.ts';
-import type { RankingDelta } from '../types.ts';
+import type { RankingDelta, KeywordDelta } from '../types.ts';
 
 export function computeRankingDelta(
   currentScan: GridScanSummary,
@@ -194,4 +194,93 @@ export function formatDeltaBadge(delta?: RankingDelta | null): {
     colorClass: 'bg-slate-100 text-slate-700 border-slate-200',
     arrow: '●',
   };
+}
+
+/**
+ * Returns formatted delta badge text e.g. "▲ +1.8", "▼ -1.2", "● 0.0"
+ */
+export function formatKeywordDeltaText(avgSerpDelta: number): string {
+  if (avgSerpDelta > 0) return `▲ +${avgSerpDelta}`;
+  if (avgSerpDelta < 0) return `▼ ${avgSerpDelta}`;
+  return '● 0.0';
+}
+
+export interface GenericScanForDelta {
+  createdAt: string;
+  keyword?: string;
+  scanSummary?: {
+    keyword?: string;
+    averageRank?: number;
+    top3Percentage?: number;
+    createdAt?: string;
+  };
+}
+
+/**
+ * Compares sequential scans (Scan 0 vs Scan 1) per keyword to extract keyword deltas
+ */
+export function computeSequentialKeywordDeltas(
+  scans: GenericScanForDelta[]
+): Record<string, KeywordDelta> {
+  const byKeyword = new Map<string, GenericScanForDelta[]>();
+
+  for (const scan of scans) {
+    const rawKw = scan.keyword || scan.scanSummary?.keyword || '';
+    const kw = rawKw.trim();
+    if (!kw) continue;
+    const lower = kw.toLowerCase();
+    if (!byKeyword.has(lower)) {
+      byKeyword.set(lower, []);
+    }
+    byKeyword.get(lower)!.push(scan);
+  }
+
+  const result: Record<string, KeywordDelta> = {};
+
+  for (const [lowerKw, list] of byKeyword.entries()) {
+    // Sort descending by createdAt
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const canonicalKeyword = list[0].keyword || list[0].scanSummary?.keyword || lowerKw;
+    const latest = list[0];
+    const latestAvg = Number((latest.scanSummary?.averageRank ?? 10.0).toFixed(1));
+    const latestTop3 = Number((latest.scanSummary?.top3Percentage ?? 0).toFixed(1));
+
+    if (list.length >= 2) {
+      const prior = list[1];
+      const priorAvg = Number((prior.scanSummary?.averageRank ?? 10.0).toFixed(1));
+      const priorTop3 = Number((prior.scanSummary?.top3Percentage ?? 0).toFixed(1));
+
+      // SERP rank: lower number is closer to #1 (improvement)
+      const avgSerpDelta = Number((priorAvg - latestAvg).toFixed(1));
+      const inPackDelta = Number((latestTop3 - priorTop3).toFixed(1));
+
+      result[canonicalKeyword] = {
+        keyword: canonicalKeyword,
+        avgSerpDelta,
+        inPackDelta,
+        previousAvgSerp: priorAvg,
+        currentAvgSerp: latestAvg,
+        lastScannedAt: latest.createdAt,
+        badgeText: formatKeywordDeltaText(avgSerpDelta),
+        isPositive: avgSerpDelta > 0,
+        isNegative: avgSerpDelta < 0,
+        status: avgSerpDelta > 0 ? 'improved' : avgSerpDelta < 0 ? 'dropped' : 'stable',
+      };
+    } else {
+      result[canonicalKeyword] = {
+        keyword: canonicalKeyword,
+        avgSerpDelta: 0,
+        inPackDelta: 0,
+        currentAvgSerp: latestAvg,
+        lastScannedAt: latest.createdAt,
+        badgeText: '● Baseline',
+        isPositive: false,
+        isNegative: false,
+        status: 'baseline',
+      };
+    }
+  }
+
+  return result;
 }

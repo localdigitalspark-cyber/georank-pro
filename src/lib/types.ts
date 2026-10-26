@@ -34,6 +34,19 @@ export interface RankingDelta {
   nodesUnchanged?: number;
 }
 
+export interface KeywordDelta {
+  keyword: string;
+  avgSerpDelta: number;
+  inPackDelta: number;
+  previousAvgSerp?: number;
+  currentAvgSerp: number;
+  lastScannedAt?: string;
+  badgeText: string;
+  isPositive: boolean;
+  isNegative: boolean;
+  status: 'improved' | 'dropped' | 'stable' | 'baseline';
+}
+
 export type WinLossAlertType = 'win_3pack_enter' | 'loss_rank_drop' | 'loss_3pack_exit';
 
 export interface WinLossAlert {

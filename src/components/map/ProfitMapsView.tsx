@@ -342,22 +342,22 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                 <span className="truncate">{currentKeywordObj.keyword}</span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                {activeDeltaBadge && activeDeltaBadge.shortText !== '0.0' && (
-                  <span
-                    data-testid="active-keyword-delta-badge"
-                    className={`text-[9px] sm:text-[10px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md font-bold ${
-                      activeDeltaBadge.isPositive
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : activeDeltaBadge.isNegative
-                        ? 'bg-rose-500/20 text-rose-300'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {activeDeltaBadge.shortText}
-                  </span>
-                )}
+                <span className="text-slate-500 text-xs hidden sm:inline">|</span>
                 <span className="text-[10px] sm:text-[11px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
-                  {currentKeywordObj.top3Percentage}%
+                  Top 3: {currentKeywordObj.top3Percentage}%
+                </span>
+                <span className="text-slate-500 text-xs hidden sm:inline">|</span>
+                <span
+                  data-testid="active-keyword-delta-badge"
+                  className={`text-[9px] sm:text-[10px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md font-bold ${
+                    activeDeltaBadge?.isPositive
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : activeDeltaBadge?.isNegative
+                      ? 'bg-rose-500/20 text-rose-300'
+                      : 'bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  {activeDeltaBadge ? activeDeltaBadge.shortText : '● 0.0'}
                 </span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
@@ -384,9 +384,16 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                 <div className="max-h-56 overflow-y-auto space-y-1 py-1 no-scrollbar">
                   {keywordsList.map((k) => {
                     const isSelected = activeKeyword.toLowerCase() === k.keyword.toLowerCase();
+                    const deltaObj = k.delta || {
+                      shortText: '● 0.0',
+                      isPositive: false,
+                      isNegative: false,
+                    };
+
                     return (
                       <div
                         key={k.id}
+                        data-testid={`keyword-dropdown-item-${k.id}`}
                         onClick={() => {
                           if (onSelectKeyword) {
                             onSelectKeyword(k.keyword);
@@ -399,7 +406,8 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                             : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                        {/* Col 1: Left - Keyword Name */}
+                        <div className="flex items-center gap-2 min-w-0 pr-2 flex-1">
                           {isSelected ? (
                             <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           ) : (
@@ -408,20 +416,8 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                           <span className="truncate">{k.keyword}</span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {k.delta && (
-                            <span
-                              className={`text-[9px] font-mono font-bold px-1 py-0.5 rounded-md ${
-                                k.delta.isPositive
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : k.delta.isNegative
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-slate-100 text-slate-600'
-                              }`}
-                            >
-                              {k.delta.shortText}
-                            </span>
-                          )}
+                        {/* Col 2: Center - Current Top 3 Coverage % */}
+                        <div className="px-2 shrink-0">
                           <span
                             className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md ${
                               isSelected
@@ -431,6 +427,23 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                           >
                             {k.top3Percentage}%
                           </span>
+                        </div>
+
+                        {/* Col 3: Right - Delta Badge */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            data-testid={`keyword-delta-badge-${k.id}`}
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                              deltaObj.isPositive
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : deltaObj.isNegative
+                                ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}
+                          >
+                            {deltaObj.shortText}
+                          </span>
+
                           <button
                             type="button"
                             onClick={(e) => handleDeleteKeyword(k.keyword, e)}

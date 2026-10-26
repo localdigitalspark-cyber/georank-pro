@@ -32,7 +32,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { inferKeywordFromTrade, type ResolvedLocation } from '../search/BusinessSearchInput.tsx';
-import type { RankingDelta, TrackingFrequency } from '../../lib/types.ts';
+import type { RankingDelta, TrackingFrequency, KeywordDelta } from '../../lib/types.ts';
 import { formatDeltaBadge } from '../../lib/tracking/ranking-delta.ts';
 
 export interface BusinessCardItem {
@@ -57,8 +57,10 @@ export interface BusinessCardItem {
     alertOnRankDrop?: boolean;
     rankDropThreshold?: number;
     nextTrackDue?: string;
+    lastTrackedAt?: string;
   };
   latestDelta?: RankingDelta;
+  keywordDeltas?: Record<string, KeywordDelta>;
 }
 
 export interface BusinessesListViewProps {
@@ -257,6 +259,28 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
       lat: 30.4021,
       lng: -97.7258,
       keyword: 'Chiropractor Austin',
+      trackingConfig: {
+        enabled: true,
+        frequency: 'monthly',
+        alertOnThreePackEnter: true,
+        alertOnRankDrop: true,
+        rankDropThreshold: 2.0,
+      },
+      latestDelta: {
+        avgSerpDelta: 0.9,
+        inPackDelta: 6.0,
+        enteredThreePack: false,
+        droppedFromThreePack: false,
+        previousAvgSerp: 4.7,
+        currentAvgSerp: 3.8,
+        previousTop3Percentage: 42.0,
+        currentTop3Percentage: 48.0,
+        currentScanDate: '2 days ago',
+        netGridMovement: 'improved',
+        nodesImproved: 5,
+        nodesDropped: 1,
+        nodesUnchanged: 19,
+      },
     },
     {
       id: 'b4',
@@ -271,6 +295,25 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
       lat: 30.2690,
       lng: -97.7390,
       keyword: 'Drain Cleaning',
+      trackingConfig: {
+        enabled: false,
+        frequency: 'off',
+      },
+      latestDelta: {
+        avgSerpDelta: 0.0,
+        inPackDelta: 0.0,
+        enteredThreePack: false,
+        droppedFromThreePack: false,
+        previousAvgSerp: 6.4,
+        currentAvgSerp: 6.4,
+        previousTop3Percentage: 36.0,
+        currentTop3Percentage: 36.0,
+        currentScanDate: '3 days ago',
+        netGridMovement: 'stable',
+        nodesImproved: 0,
+        nodesDropped: 0,
+        nodesUnchanged: 25,
+      },
     },
   ];
 
