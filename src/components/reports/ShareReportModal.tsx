@@ -78,10 +78,10 @@ export const ShareReportModal: React.FC<ShareReportModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider">
-                Public Shareable Client Report
+                Client Report Generator &amp; Presentation Deck
               </h3>
               <p className="text-[11px] text-slate-400">
-                Permanent read-only link for client presentations and cold outreach.
+                Select report format and gating strategy before presenting to client or sending outreach.
               </p>
             </div>
           </div>
@@ -108,54 +108,54 @@ export const ShareReportModal: React.FC<ShareReportModalProps> = ({
           {/* Tier Selection Segmented Controls */}
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-slate-300">
-              Select Report Experience &amp; Gating Tier:
+              Select Report Format &amp; Gating Strategy:
             </label>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                data-testid="share-tier-full"
-                onClick={() => setSelectedTier('full')}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                  selectedTier === 'full'
-                    ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500'
-                    : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Full Growth Audit</span>
-                  </span>
-                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">
-                    Complete
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 leading-tight">
-                  Geo-Grid rankings + full 5-pillar omnichannel conversion leakage &amp; recovery roadmap.
-                </p>
-              </button>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 data-testid="share-tier-lite"
                 onClick={() => setSelectedTier('lite')}
-                className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
                   selectedTier === 'lite'
-                    ? 'bg-amber-950/50 border-amber-500 text-white shadow-sm ring-1 ring-amber-500'
+                    ? 'bg-amber-950/60 border-amber-500 text-white shadow-sm ring-1 ring-amber-500'
                     : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold text-white flex items-center gap-1.5">
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Lite SERP Teaser</span>
+                    <span>● Lite Geo-Grid &amp; Keyword Teaser</span>
                   </span>
                   <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">
                     Lead Gate
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 leading-tight">
-                  Geo-Grid &amp; search volumes visible. Omnichannel leakage locked behind a lead request form.
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Geo-grid rank map, competitor positions, and local keyword search volumes. Perfect for cold outreach and audit teasers with locked conversion gate.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                data-testid="share-tier-full"
+                onClick={() => setSelectedTier('full')}
+                className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                  selectedTier === 'full'
+                    ? 'bg-indigo-950/70 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>○ Full Omnichannel Growth Audit</span>
+                  </span>
+                  <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">
+                    Complete
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Complete 5-pillar operational audit including speed-to-lead, missed-call revenue recovery, reputation velocity, and 4-phase roadmap.
                 </p>
               </button>
             </div>
@@ -229,10 +229,10 @@ export const ShareReportModal: React.FC<ShareReportModalProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               data-testid="share-report-open-tab"
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-xl text-xs font-bold border border-indigo-500/40 flex items-center gap-2 shadow-md shadow-indigo-600/20 transition cursor-pointer"
             >
-              <span>Open Report in New Tab</span>
-              <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
+              <span>🚀 Open Client Report in New Tab</span>
+              <ExternalLink className="w-3.5 h-3.5 text-indigo-200" />
             </a>
           </div>
         </div>

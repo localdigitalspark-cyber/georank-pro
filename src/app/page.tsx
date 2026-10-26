@@ -491,8 +491,13 @@ export default function DashboardPage() {
   };
 
   const handleOpenShareReport = async () => {
+    const activeScanId = scanSummary?.scanId || 'latest';
+    const fallbackUrl = `${window.location.origin}/reports/${activeScanId}`;
+
     if (!scanSummary) {
-      handleOpenClientReport();
+      setShareScanId(activeScanId);
+      setShareUrl(fallbackUrl);
+      setShareModalOpen(true);
       return;
     }
     try {
@@ -518,11 +523,15 @@ export default function DashboardPage() {
         setShareScanId(json.scanId);
         setShareUrl(json.shareUrl);
         setShareModalOpen(true);
+      } else {
+        setShareScanId(scanSummary.scanId);
+        setShareUrl(fallbackUrl);
+        setShareModalOpen(true);
       }
     } catch (err) {
       console.error('Failed saving scan for share link:', err);
       setShareScanId(scanSummary.scanId);
-      setShareUrl(`${window.location.origin}/reports/${scanSummary.scanId}`);
+      setShareUrl(fallbackUrl);
       setShareModalOpen(true);
     }
   };
@@ -1087,7 +1096,7 @@ export default function DashboardPage() {
               setBusinessTab(tab);
             }}
             onOpenNewScan={() => setIsNewScanOpen(true)}
-            onOpenReports={() => handleOpenClientReport()}
+            onOpenReports={() => handleOpenShareReport()}
             onBackToBusinesses={() => setBusinessWorkspaceOpen(false)}
             onDeleteBusiness={handleDeleteActiveBusiness}
             totalKeywords={Object.keys(keywordCache).length}
@@ -1419,7 +1428,7 @@ export default function DashboardPage() {
               scanSummary={scanSummary}
               onRegenerateAudit={() => scanSummary && runAudit(scanSummary)}
               isRegenerating={isGeneratingAudit}
-              onOpenClientReport={() => handleOpenClientReport()}
+              onOpenClientReport={handleOpenShareReport}
             />
           )}
 

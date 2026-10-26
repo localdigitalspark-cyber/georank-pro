@@ -244,15 +244,15 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
 
   // Multi-Scenario State
   const [scenario, setScenario] = useState<'conservative' | 'expected' | 'leader'>('expected');
-  const [avgTicketValue, setAvgTicketValue] = useState<number>(450);
-  const [closeRate, setCloseRate] = useState<number>(30); // 30% default
+  const [avgTicketValue, setAvgTicketValue] = useState<number>(280);
+  const [closeRate, setCloseRate] = useState<number>(25); // 25% calibrated default
   const [showMethodology, setShowMethodology] = useState<boolean>(false);
   const [showAuditTrail, setShowAuditTrail] = useState<boolean>(false);
 
   // Omnichannel Digital Leakage Operational State
-  const [monthlySiteVisitors, setMonthlySiteVisitors] = useState<number>(650);
-  const [pastCustomerListSize, setPastCustomerListSize] = useState<number>(1200);
-  const [reviewVelocityMonthly, setReviewVelocityMonthly] = useState<number>(2);
+  const [monthlySiteVisitors, setMonthlySiteVisitors] = useState<number>(180);
+  const [pastCustomerListSize, setPastCustomerListSize] = useState<number>(450);
+  const [reviewVelocityMonthly, setReviewVelocityMonthly] = useState<number>(1.5);
 
   // 5 Pillar Fix Toggles for Omnichannel Digital Infrastructure Audit
   const [websiteConversionFixed, setWebsiteConversionFixed] = useState<boolean>(false);
@@ -411,24 +411,27 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       : 'Market Leader (60% Share)';
 
   // 2. Base market pool calculations:
-  const totalVolume = totalUntappedMonthlyVolume > 0 ? totalUntappedMonthlyVolume : 1800;
-  // Local click-to-call intent pool: ~15% of searchers actively call/inquire
-  const totalPotentialCalls = totalVolume * 0.15;
+  const totalVolume = totalUntappedMonthlyVolume > 0 ? totalUntappedMonthlyVolume : 400;
+  // Local click-to-call intent pool: in local service trades, ~1.5% of searchers translate to direct pack inquiries
+  const totalPotentialCalls = Math.min(60, Math.max(12, Math.round(totalVolume * 0.015)));
   // Geographic deficit ratio (nodes outside Top 3)
-  const dropoffRatio = totalNodes > 0 ? totalNodesInRedOrYellow / totalNodes : 0.84;
+  const dropoffRatio = totalNodes > 0 ? totalNodesInRedOrYellow / totalNodes : 0.75;
   const totalMissedTerritoryCalls = totalPotentialCalls * dropoffRatio;
 
   // 3. New High-Ticket Inquiries / Month under active scenario:
   const recoveredInquiries = Math.max(
-    scenario === 'conservative' ? 16 : scenario === 'expected' ? 36 : 64,
-    Math.round(totalMissedTerritoryCalls * scenarioShare)
+    scenario === 'conservative' ? 4 : scenario === 'expected' ? 8 : 16,
+    Math.min(
+      scenario === 'conservative' ? 8 : scenario === 'expected' ? 16 : 28,
+      Math.round(totalMissedTerritoryCalls * scenarioShare)
+    )
   );
 
   // 4. Closed Deals = Inquiries * closeRate
   const closedDeals = Math.max(1, Math.round(recoveredInquiries * (closeRate / 100)));
 
-  // 5. Monthly Revenue Leaking = (Missed Inquiries * Close Rate * Average Value)
-  const monthlyRevenueLeaking = Math.round(recoveredInquiries * (closeRate / 100) * avgTicketValue);
+  // 5. Monthly Revenue Leaking = (Closed Deals * Average Value)
+  const monthlyRevenueLeaking = Math.round(closedDeals * avgTicketValue);
 
   // 6. Annual Revenue Left on the Table = Monthly Revenue Leaking * 12
   const annualRevenueLeaking = monthlyRevenueLeaking * 12;
@@ -530,7 +533,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       }
 
       const kwWeight = item.monthlySearchVolume / totalCoreVol;
-      const kwMissedCalls = Math.max(2, Math.round(recoveredInquiries * kwWeight));
+      const kwMissedCalls = Math.max(1, Math.round(recoveredInquiries * kwWeight));
       const kwRevenueImpact = Math.round(kwMissedCalls * (closeRate / 100) * avgTicketValue);
 
       return {
@@ -598,23 +601,23 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
   };
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-x-hidden">
+    <div className="space-y-12 sm:space-y-16 py-10 px-4 sm:px-8 max-w-6xl mx-auto w-full overflow-x-hidden">
       {/* Top Action Bar (Hidden in Print) */}
-      <div className="print:hidden bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="print:hidden bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-              <Sparkles className="w-4 h-4" />
+          <div className="flex items-center space-x-2.5">
+            <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+              <Sparkles className="w-5 h-5" />
             </span>
-            <h2 className="text-base font-bold text-slate-900 tracking-tight">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
               Executive Local SEO Audit &amp; Revenue Leak Report
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <span className="text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 mt-1.5">
+            <span className="text-sm text-slate-500">
               Prepared for <strong className="text-slate-800">{safeSummary.target.businessName}</strong>
             </span>
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${activeMetrics.operationalBadge.pillClass}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold border ${activeMetrics.operationalBadge.pillClass}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${activeMetrics.operationalBadge.dotClass}`} />
               <span>{activeMetrics.operationalBadge.label}</span>
             </span>
@@ -626,16 +629,16 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             <button
               onClick={onRegenerateAudit}
               disabled={isRegenerating}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <Sparkles className="w-4 h-4 text-amber-500" />
               <span>{isRegenerating ? 'Analyzing...' : 'Refresh Audit'}</span>
             </button>
           )}
 
           <button
             onClick={handlePrint}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-emerald-600/20 transition flex items-center space-x-1.5 cursor-pointer"
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-xs hover:shadow-emerald-600/20 transition flex items-center space-x-2 cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>Print / Save White-Label PDF</span>
@@ -644,17 +647,17 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
       </div>
 
       {/* Report Tier Switcher & Mode Indicator */}
-      <div className="print:hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-5 rounded-2xl border border-indigo-900/40 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
+      <div className="print:hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-5 sm:p-6 rounded-2xl border border-indigo-900/40 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-indigo-400 font-bold">
+            <span className="text-xs font-mono uppercase tracking-wider text-indigo-400 font-bold">
               Report Experience Tier
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-slate-300 font-mono font-medium">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 font-mono font-medium">
               {internalTier === 'full' ? 'Unrestricted Agency Audit' : 'Client Prospecting Teaser'}
             </span>
           </div>
-          <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+          <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
             {internalTier === 'full'
               ? 'Displaying all 5 omnichannel conversion pillars, operational diagnostic, and recovery roadmap.'
               : 'SERP & ranking metrics visible. 5-pillar omnichannel conversion audit locked behind lead gate.'}
@@ -662,45 +665,43 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         </div>
 
         {/* Tier Selector Toggle */}
-        <div className="flex items-center p-1 bg-slate-950/80 rounded-xl border border-slate-800 self-start sm:self-auto shrink-0 shadow-inner">
-          <button
-            type="button"
-            data-testid="tier-toggle-full"
-            onClick={() => handleTierChange('full')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              internalTier === 'full'
-                ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Full Growth Audit</span>
-            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/20 text-slate-900 font-bold">
-              Complete
-            </span>
-          </button>
-
+        <div className="flex items-center p-1.5 bg-slate-950/80 rounded-xl border border-slate-800 self-start sm:self-auto shrink-0 shadow-inner">
           <button
             type="button"
             data-testid="tier-toggle-lite"
             onClick={() => handleTierChange('lite')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
               internalTier === 'lite'
                 ? 'bg-amber-500 text-slate-950 shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Lite SERP Teaser</span>
-            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/20 text-slate-900 font-bold">
+            <span>🗺️ Lite Geo-Grid Teaser</span>
+            <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/20 text-slate-900 font-bold">
               Gated
+            </span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="tier-toggle-full"
+            onClick={() => handleTierChange('full')}
+            className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+              internalTier === 'full'
+                ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>⚡ Full Growth Audit</span>
+            <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/20 text-slate-900 font-bold">
+              Complete
             </span>
           </button>
         </div>
       </div>
 
       {/* Main Pitch Deck Container (Clean Light Theme for Screen & Print) */}
-      <div className="bg-white print:p-6 p-4 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-8 sm:space-y-12 text-slate-800 w-full max-w-full overflow-x-hidden">
+      <div className="bg-white print:p-6 p-6 sm:p-12 rounded-3xl border border-slate-200/80 shadow-xs space-y-12 sm:space-y-16 text-slate-800 w-full max-w-full overflow-x-hidden">
         {/* Mock Simulation Warning Banner */}
         {safeSummary.mode === 'mock' && (
           <div className="bg-amber-500 text-slate-950 font-black px-4 py-3 rounded-xl border-2 border-amber-600 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs tracking-wide">
@@ -759,30 +760,30 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         {/* ========================================================================= */}
         {/* 1. SECTION: REVENUE POTENTIAL & RECOVERY FORECAST (MULTI-SCENARIO MODULE) */}
         {/* ========================================================================= */}
-        <div className="border-2 border-emerald-200/90 rounded-2xl bg-white p-5 sm:p-6 shadow-sm space-y-5 print:break-inside-avoid">
+        <div className="border-2 border-emerald-200/90 rounded-2xl bg-white p-6 sm:p-10 shadow-sm space-y-8 print:break-inside-avoid">
           {/* Header & Scenario Switcher Bar */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
             <div>
-              <div className="flex flex-wrap items-center gap-2 text-emerald-700">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-5 h-5 text-emerald-600 stroke-[2.5]" />
-                  <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-900">
+              <div className="flex flex-wrap items-center gap-2.5 text-emerald-700">
+                <div className="flex items-center space-x-2.5">
+                  <Calculator className="w-6 h-6 text-emerald-600 stroke-[2.5]" />
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                     Revenue Potential &amp; Recovery Forecast
                   </h2>
                 </div>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Calibrated Model</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mt-1">
+              <p className="text-sm sm:text-base text-slate-600 mt-2 leading-relaxed">
                 Simulate your projected business turnover recovered from local rivals by reclaiming Google 3-Pack positions.
               </p>
             </div>
 
             {/* Scenario Switcher Pill Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200/80 self-start lg:self-auto print:hidden">
-              <span className="text-[10px] uppercase font-bold text-slate-500 px-2 hidden sm:inline">Scenario:</span>
+            <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200/80 self-start lg:self-auto print:hidden">
+              <span className="text-xs uppercase font-bold text-slate-500 px-2 hidden sm:inline">Scenario:</span>
               {(
                 [
                   { id: 'conservative', label: 'Conservative (15% Share)' },
@@ -796,7 +797,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                     key={item.id}
                     type="button"
                     onClick={() => handleScenarioChange(item.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                       active
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -810,15 +811,15 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
           </div>
 
           {/* Interactive Impact Sliders (Dual Controls Top Sub-Bar) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-2xs print:hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/70 p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-2xs print:hidden">
             {/* Slider 1: Average Value per Customer / Job */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-slate-700 flex items-center space-x-2">
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                   <span>Average Value per Customer / Job:</span>
                 </span>
-                <span className="font-mono font-bold text-sm text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                <span className="font-mono font-bold text-base text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
                   {currencySymbol}{avgTicketValue.toLocaleString()}
                 </span>
               </div>
@@ -828,11 +829,11 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 max="2500"
                 step="25"
                 value={avgTicketValue}
-                onChange={(e) => handleAvgTicketChange(parseInt(e.target.value) || 450)}
+                onChange={(e) => handleAvgTicketChange(parseInt(e.target.value) || 280)}
                 data-testid="slider-avg-ticket"
-                className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                className="w-full accent-emerald-600 cursor-pointer h-2.5 bg-slate-200 rounded-lg my-2"
               />
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <div className="flex justify-between text-xs text-slate-400 font-mono">
                 <span>{currencySymbol}100 min</span>
                 <span className="text-slate-500 font-medium">Average ticket size</span>
                 <span>{currencySymbol}2,500 max</span>
@@ -840,13 +841,13 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
 
             {/* Slider 2: Lead-to-Client Close Rate */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-slate-700 flex items-center space-x-2">
                   <Percent className="w-4 h-4 text-blue-600" />
                   <span>Lead-to-Client Close Rate:</span>
                 </span>
-                <span className="font-mono font-bold text-sm text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
+                <span className="font-mono font-bold text-base text-blue-700 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
                   {closeRate}%
                 </span>
               </div>
@@ -856,11 +857,11 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                 max="60"
                 step="5"
                 value={closeRate}
-                onChange={(e) => handleCloseRateChange(parseInt(e.target.value) || 30)}
+                onChange={(e) => handleCloseRateChange(parseInt(e.target.value) || 25)}
                 data-testid="slider-close-rate"
-                className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-100 rounded-lg"
+                className="w-full accent-blue-600 cursor-pointer h-2.5 bg-slate-200 rounded-lg my-2"
               />
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <div className="flex justify-between text-xs text-slate-400 font-mono">
                 <span>15% conservative</span>
                 <span className="text-slate-500 font-medium">Inbound quote close rate</span>
                 <span>60% aggressive</span>
@@ -869,34 +870,34 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
           </div>
 
           {/* Methodology & Data Confidence Bar */}
-          <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 text-xs space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 sm:p-5 text-sm space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  <Target className="w-3 h-3 text-blue-600" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <Target className="w-3.5 h-3.5 text-blue-600" />
                   <span>Measured Google Pack Ranks</span>
                 </span>
-                <span className="text-slate-400 text-xs hidden sm:inline">•</span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <Calculator className="w-3 h-3 text-emerald-600" />
+                <span className="text-slate-400 text-sm hidden sm:inline">•</span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Calculator className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Projected Revenue Impact</span>
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowMethodology(!showMethodology)}
-                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer transition"
+                className="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 cursor-pointer transition"
               >
-                <Info className="w-3.5 h-3.5 text-slate-500" />
+                <Info className="w-4 h-4 text-slate-500" />
                 <span>{showMethodology ? 'Hide Methodology' : 'View Calculation Methodology'}</span>
               </button>
             </div>
             {showMethodology && (
-              <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-600 leading-relaxed space-y-1">
+              <div className="pt-2.5 border-t border-slate-200 text-xs sm:text-sm text-slate-600 leading-relaxed space-y-1.5">
                 <p>
                   <strong className="font-semibold text-slate-800">Calculation Methodology:</strong> [Keyword Search Volume] × [Local 3-Pack Share of Voice (CTR)] × [Target Close Rate] × [Average Customer Ticket Value]. Assumptions can be customized using the sliders above.
                 </p>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   • <em>Measured Google Pack Ranks:</em> Hard spatial coordinates queried directly across the geo-grid.
                   <br />
                   • <em>Projected Revenue Impact:</em> Calibrated commercial model based on local click-to-call conversion benchmarks.
@@ -906,45 +907,45 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
           </div>
 
           {/* 3 Summary Result KPI Badges */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Badge 1: Monthly Revenue Leaking */}
-            <div className="bg-gradient-to-br from-rose-50 to-white p-4 sm:p-5 rounded-xl border border-rose-200/90 shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700 block flex items-center justify-between">
+            <div className="bg-gradient-to-br from-rose-50 to-white p-6 sm:p-8 rounded-2xl border border-rose-200/90 shadow-2xs space-y-2">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-rose-700 block flex items-center justify-between">
                 <span>Monthly Revenue Leaking</span>
-                <TrendingDown className="w-4 h-4 text-rose-600" />
+                <TrendingDown className="w-5 h-5 text-rose-600" />
               </span>
-              <div data-testid="kpi-monthly-leak" className="text-xl sm:text-2xl font-black font-mono text-rose-700">
-                {currencySymbol}{monthlyRevenueLeaking.toLocaleString()} <span className="text-xs font-normal text-rose-600">/ mo</span>
+              <div data-testid="kpi-monthly-leak" className="text-3xl sm:text-5xl font-black font-mono text-rose-700 tracking-tight">
+                {currencySymbol}{monthlyRevenueLeaking.toLocaleString()} <span className="text-sm font-normal text-rose-600">/ mo</span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-tight">
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 {recoveredInquiries} inquiries × {closeRate}% close × {currencySymbol}{avgTicketValue}
               </p>
             </div>
 
             {/* Badge 2: Annual Revenue Left on the Table */}
-            <div className="bg-gradient-to-br from-amber-50 to-white p-4 sm:p-5 rounded-xl border border-amber-200/90 shadow-2xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block flex items-center justify-between">
+            <div className="bg-gradient-to-br from-amber-50 to-white p-6 sm:p-8 rounded-2xl border border-amber-200/90 shadow-2xs space-y-2">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-800 block flex items-center justify-between">
                 <span>Annual Revenue on the Table</span>
-                <Flame className="w-4 h-4 text-amber-600" />
+                <Flame className="w-5 h-5 text-amber-600" />
               </span>
-              <div data-testid="kpi-annual-leak" className="text-xl sm:text-2xl font-black font-mono text-slate-900">
-                {currencySymbol}{annualRevenueLeaking.toLocaleString()} <span className="text-xs font-normal text-slate-500">/ yr</span>
+              <div data-testid="kpi-annual-leak" className="text-3xl sm:text-5xl font-black font-mono text-slate-900 tracking-tight">
+                {currencySymbol}{annualRevenueLeaking.toLocaleString()} <span className="text-sm font-normal text-slate-500">/ yr</span>
               </div>
-              <p className="text-[11px] text-slate-500 leading-tight">
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 12 months cumulative market loss to rivals
               </p>
             </div>
 
             {/* Badge 3: New High-Ticket Inquiries / Month */}
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-4 sm:p-5 rounded-xl shadow-xs space-y-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-100 block flex items-center justify-between">
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-6 sm:p-8 rounded-2xl shadow-xs space-y-2">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-100 block flex items-center justify-between">
                 <span>Recoverable Inquiries / Month</span>
-                <ArrowUpRight className="w-4 h-4 text-emerald-200" />
+                <ArrowUpRight className="w-5 h-5 text-emerald-200" />
               </span>
-              <div data-testid="kpi-recoverable-inquiries" className="text-xl sm:text-2xl font-black font-mono text-white">
-                +{recoveredInquiries} <span className="text-xs font-normal text-emerald-100">calls / mo</span>
+              <div data-testid="kpi-recoverable-inquiries" className="text-3xl sm:text-5xl font-black font-mono text-white tracking-tight">
+                +{recoveredInquiries} <span className="text-sm font-normal text-emerald-100">calls / mo</span>
               </div>
-              <p className="text-[11px] text-emerald-100 leading-tight">
+              <p className="text-xs sm:text-sm text-emerald-100 leading-relaxed">
                 Under {scenarioLabel} ({closedDeals} closed deals)
               </p>
             </div>
@@ -1058,91 +1059,91 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         </div>
 
         {/* High-Impact Grid Telemetry KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70">
-            <span className="text-[11px] text-slate-500 font-medium block">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-slate-50/80 p-5 sm:p-6 rounded-2xl border border-slate-200/70 shadow-2xs space-y-1">
+            <span className="text-xs sm:text-sm text-slate-500 font-medium block">
               Average Grid Rank
             </span>
-            <span className="text-2xl font-black font-mono text-rose-600 mt-0.5 block">
+            <span className="text-3xl sm:text-4xl font-black font-mono text-rose-600 block tracking-tight">
               {activeMetrics.formattedRank}
             </span>
-            <span className="text-[10px] text-slate-400">Across {totalNodes} coordinates</span>
+            <span className="text-xs text-slate-400">Across {totalNodes} coordinates</span>
           </div>
 
-          <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200/70">
-            <span className="text-[11px] text-emerald-800 font-medium block">
+          <div className="bg-emerald-50/70 p-5 sm:p-6 rounded-2xl border border-emerald-200/70 shadow-2xs space-y-1">
+            <span className="text-xs sm:text-sm text-emerald-800 font-medium block">
               3-Pack Presence
             </span>
-            <span className="text-2xl font-black font-mono text-emerald-700 mt-0.5 block">
+            <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-700 block tracking-tight">
               {activeMetrics.formattedTop3}
             </span>
-            <span className="text-[10px] text-emerald-600">{top3Count} of {totalNodes} pins in top 3</span>
+            <span className="text-xs text-emerald-600">{top3Count} of {totalNodes} pins in top 3</span>
           </div>
 
-          <div className="bg-rose-50/70 p-4 rounded-xl border border-rose-200/70">
-            <span className="text-[11px] text-rose-800 font-medium block">
+          <div className="bg-rose-50/70 p-5 sm:p-6 rounded-2xl border border-rose-200/70 shadow-2xs space-y-1">
+            <span className="text-xs sm:text-sm text-rose-800 font-medium block">
               Dropoff Red Zone
             </span>
-            <span className="text-2xl font-black font-mono text-rose-700 mt-0.5 block">
+            <span className="text-3xl sm:text-4xl font-black font-mono text-rose-700 block tracking-tight">
               {activeMetrics.redZonePercentage.toFixed(1)}%
             </span>
-            <span className="text-[10px] text-rose-600">{redZoneCount} of {totalNodes} pins in red zone (rank 11+)</span>
+            <span className="text-xs text-rose-600">{redZoneCount} of {totalNodes} pins in red zone (rank 11+)</span>
           </div>
 
-          <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70">
-            <span className="text-[11px] text-slate-500 font-medium block">
+          <div className="bg-slate-50/80 p-5 sm:p-6 rounded-2xl border border-slate-200/70 shadow-2xs space-y-1">
+            <span className="text-xs sm:text-sm text-slate-500 font-medium block">
               Projected Monthly Loss
             </span>
-            <span className="text-2xl font-black font-mono text-slate-900 mt-0.5 block">
-              {currencySymbol}{(monthlyRevenueLeaking / 1000).toFixed(1)}k <span className="text-xs font-normal text-slate-400">/ mo</span>
+            <span className="text-3xl sm:text-4xl font-black font-mono text-slate-900 block tracking-tight">
+              {currencySymbol}{(monthlyRevenueLeaking / 1000).toFixed(1)}k <span className="text-sm font-normal text-slate-400">/ mo</span>
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-xs text-slate-400">
               {totalNodesInRedOrYellow} zones outside 3-pack
             </span>
           </div>
         </div>
 
         {/* Executive Summary & Spatial Centroid Diagnosis */}
-        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/70 space-y-2">
-          <div className="flex items-center space-x-2 text-slate-900">
-            <Compass className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-xs font-bold uppercase tracking-wider">
+        <div className="bg-slate-50/80 p-6 sm:p-8 rounded-2xl border border-slate-200/70 space-y-3 shadow-2xs">
+          <div className="flex items-center space-x-2.5 text-slate-900">
+            <Compass className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider">
               Executive Visibility Summary &amp; Spatial Centroid Diagnosis
             </h3>
           </div>
-          <p className="text-xs leading-relaxed text-slate-700">
+          <p className="text-sm sm:text-base leading-relaxed text-slate-700">
             {safeAudit.executiveSummary}
           </p>
         </div>
 
         {/* Dominant Competitors Stealing Territory */}
-        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/70 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <Building className="w-4 h-4 text-rose-500" />
+        <div className="bg-slate-50/80 p-6 sm:p-8 rounded-2xl border border-slate-200/70 space-y-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <Building className="w-5 h-5 text-rose-500" />
               <span>Dominant Competitors Intercepting Calls in Your Radius</span>
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">
+            <span className="text-xs sm:text-sm text-slate-500 font-mono">
               Top 3-Pack Takeover Share
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {safeSummary.dominantCompetitors.slice(0, 3).map((comp, idx) => (
               <div
                 key={comp.name || idx}
-                className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs space-y-1"
+                className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-2"
               >
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="font-mono font-bold text-slate-500">#{idx + 1} Rival</span>
                   <span className="font-mono font-bold text-amber-500 flex items-center">
                     ★ {comp.rating ?? 4.8} <span className="text-slate-400 font-normal ml-0.5">({comp.reviews ?? 100})</span>
                   </span>
                 </div>
-                <div className="font-bold text-slate-900 text-xs truncate">
+                <div className="font-bold text-slate-900 text-sm sm:text-base truncate">
                   {comp.name}
                 </div>
-                <div className="text-[11px] text-emerald-700 font-mono">
+                <div className="text-xs sm:text-sm text-emerald-700 font-mono">
                   Captures {comp.top3SharePercent ?? 50}% of scanned territory
                 </div>
               </div>
@@ -1151,69 +1152,69 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         </div>
 
         {/* Discovered High-Volume Commercial Keywords & Search Demand */}
-        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200/70 space-y-4 print:break-inside-avoid">
+        <div className="bg-slate-50/80 p-6 sm:p-8 rounded-2xl border border-slate-200/70 space-y-6 print:break-inside-avoid shadow-2xs">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-4">
             <div>
-              <div className="flex items-center space-x-2 text-slate-900">
-                <Target className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center space-x-2.5 text-slate-900">
+                <Target className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider">
                   Discovered High-Volume Commercial Keywords &amp; Search Demand
                 </h3>
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
                 High-intent local search terms in <strong className="text-slate-700">{targetCity}</strong> with commercial CPC value and Google 3-Pack capture potential.
               </p>
             </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md self-start sm:self-auto border border-emerald-200">
+            <span className="text-xs font-mono font-bold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg self-start sm:self-auto border border-emerald-200">
               {displayedKeywords.length} Search Queries Analyzed
             </span>
           </div>
 
           {/* Summary Metric Callouts */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center justify-between text-slate-500 mb-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider">Total Monthly Searches</span>
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-xs uppercase font-bold tracking-wider">Total Monthly Searches</span>
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
               </div>
-              <span className="text-xl font-black font-mono text-slate-900 block">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 block tracking-tight">
                 {totalUntappedMonthlyVolume.toLocaleString()}
               </span>
-              <span className="text-[10px] text-slate-400">local monthly query volume</span>
+              <span className="text-xs text-slate-400">local monthly query volume</span>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center justify-between text-emerald-700 mb-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider">Est. Inbound Calls (Top 3)</span>
-                <MousePointerClick className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-emerald-700 mb-1">
+                <span className="text-xs uppercase font-bold tracking-wider">Est. Inbound Calls (Top 3)</span>
+                <MousePointerClick className="w-4 h-4 text-emerald-600" />
               </div>
-              <span className="text-xl font-black font-mono text-emerald-700 block">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-700 block tracking-tight">
                 ~{estimatedInboundClicksMonthly.toLocaleString()}
               </span>
-              <span className="text-[10px] text-emerald-600">targeted monthly dispatch leads</span>
+              <span className="text-xs text-emerald-600">targeted monthly dispatch leads</span>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-              <div className="flex items-center justify-between text-slate-500 mb-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider">Average Local CPC</span>
-                <DollarSign className="w-3.5 h-3.5 text-amber-600" />
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                <span className="text-xs uppercase font-bold tracking-wider">Average Local CPC</span>
+                <DollarSign className="w-4 h-4 text-amber-600" />
               </div>
-              <span className="text-xl font-black font-mono text-slate-900 block">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 block tracking-tight">
                 {averageCpcFormatted}
               </span>
-              <span className="text-[10px] text-slate-400">Google Ads equivalent</span>
+              <span className="text-xs text-slate-400">Google Ads equivalent</span>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-3.5 rounded-xl shadow-xs">
-              <div className="flex items-center justify-between text-emerald-100 mb-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider">Annual Traffic Value (Top 3)</span>
-                <Flame className="w-3.5 h-3.5 text-amber-300" />
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white p-5 rounded-2xl shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-emerald-100 mb-1">
+                <span className="text-xs uppercase font-bold tracking-wider">Annual Traffic Value (Top 3)</span>
+                <Flame className="w-4 h-4 text-amber-300" />
               </div>
-              <span className="text-xl font-black font-mono text-white block">
-                {currencySymbol}{(annualTrafficValue / 1000).toFixed(0)}k <span className="text-xs font-normal text-emerald-100">/ yr</span>
+              <span className="text-2xl sm:text-3xl font-black font-mono text-white block tracking-tight">
+                {currencySymbol}{(annualTrafficValue / 1000).toFixed(0)}k <span className="text-sm font-normal text-emerald-100">/ yr</span>
               </span>
-              <span className="text-[10px] text-emerald-100">free organic ad spend value</span>
+              <span className="text-xs text-emerald-100">free organic ad spend value</span>
             </div>
           </div>
 
@@ -1485,22 +1486,22 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
           </div>
 
           {/* Top Sub-Bar: Traffic Baseline Slider & Benchmark Recovery Pills */}
-          <div className="bg-slate-50/80 p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-3 print:hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center space-x-2">
-                <Globe className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+          <div className="bg-slate-50/80 p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-2.5">
+                <Globe className="w-5 h-5 text-emerald-600" />
+                <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">
                   Monthly Traffic Baseline &amp; Recovery Benchmarks:
                 </span>
               </div>
 
-              {/* Benchmark Pills: Conservative 25% / Expected 50% / Aggressive 75% */}
-              <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-slate-200/80 self-start sm:self-auto shadow-2xs">
-                <span className="text-[10px] uppercase font-bold text-slate-400 px-1.5 hidden sm:inline">Benchmark:</span>
+              {/* Benchmark Pills: Conservative (80) / Expected (180) / Metro Lead (350) */}
+              <div className="flex items-center gap-2 p-1.5 bg-white rounded-xl border border-slate-200/80 self-start sm:self-auto shadow-2xs">
+                <span className="text-xs uppercase font-bold text-slate-400 px-2 hidden sm:inline">Benchmark:</span>
                 {[
-                  { label: 'Conservative 25%', visitors: 400 },
-                  { label: 'Expected 50%', visitors: 650 },
-                  { label: 'Aggressive 75%', visitors: 1200 },
+                  { label: 'Conservative (80)', visitors: 80 },
+                  { label: 'Expected (180)', visitors: 180 },
+                  { label: 'Metro Lead (350)', visitors: 350 },
                 ].map((item) => {
                   const isActive = monthlySiteVisitors === item.visitors;
                   return (
@@ -1508,7 +1509,7 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
                       key={item.label}
                       type="button"
                       onClick={() => setMonthlySiteVisitors(item.visitors)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition cursor-pointer ${
                         isActive
                           ? 'bg-amber-500 text-slate-950 shadow-xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -1522,29 +1523,29 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
             </div>
 
             {/* Monthly Site Visitors Slider */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-700 flex items-center space-x-1.5">
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-slate-700 flex items-center space-x-2">
                   <span>Estimated Monthly Web &amp; Maps Visitors:</span>
                 </span>
-                <span className="font-mono font-bold text-xs text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                <span className="font-mono font-bold text-sm sm:text-base text-slate-900 bg-white px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
                   {monthlySiteVisitors.toLocaleString()} visitors / month
                 </span>
               </div>
               <input
                 type="range"
-                min="100"
-                max="3000"
-                step="50"
+                min="30"
+                max="600"
+                step="10"
                 value={monthlySiteVisitors}
-                onChange={(e) => setMonthlySiteVisitors(parseInt(e.target.value) || 650)}
+                onChange={(e) => setMonthlySiteVisitors(parseInt(e.target.value) || 180)}
                 data-testid="slider-site-visitors"
-                className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                className="w-full accent-amber-500 cursor-pointer h-2.5 bg-slate-200 rounded-lg my-2"
               />
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                <span>100 visitors min</span>
+              <div className="flex justify-between text-xs text-slate-400 font-mono">
+                <span>30 visitors min</span>
                 <span className="text-slate-500 font-medium">Local organic, maps, and direct traffic</span>
-                <span>3,000 visitors max</span>
+                <span>600 visitors max</span>
               </div>
             </div>
           </div>
@@ -1923,125 +1924,125 @@ export const AuditDeck: React.FC<AuditDeckProps> = ({
         )}
 
         {/* 2. SECTION: The 3 Priority Fixes to Reclaim Your Area (Customer-Friendly Remedies) */}
-        <div className="space-y-4 print:break-inside-avoid">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 pb-3">
+        <div className="space-y-6 print:break-inside-avoid">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
             <div>
-              <div className="flex items-center space-x-2 text-slate-900">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-sm sm:text-base font-black uppercase tracking-wider">
+              <div className="flex items-center space-x-2.5 text-slate-900">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                   The 3 Priority Fixes to Reclaim Your Area
                 </h3>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-sm sm:text-base text-slate-600 mt-1 leading-relaxed">
                 Targeted, benefit-driven remedies engineered to expand your Google Maps reach and capture lost customer calls.
               </p>
             </div>
-            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 self-start sm:self-auto">
+            <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 self-start sm:self-auto">
               3-Step Action Plan
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Fix 1 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition group">
-              <div className="space-y-3">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-5 hover:border-emerald-300 transition group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md border border-emerald-200">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200">
                     Fix 01 • On-Page &amp; Services
                   </span>
-                  <Globe className="w-4 h-4 text-emerald-600" />
+                  <Globe className="w-5 h-5 text-emerald-600" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition leading-snug">
+                <h4 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition leading-snug">
                   Match Your Website &amp; Service Pages to Exact Customer Searches
                 </h4>
-                <div className="space-y-2 text-xs text-slate-600">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
-                    <span className="font-bold text-rose-700 text-[10px] uppercase tracking-wide block mb-0.5">The Problem</span>
+                <div className="space-y-2.5 text-sm text-slate-600">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/70">
+                    <span className="font-bold text-rose-700 text-xs uppercase tracking-wide block mb-1">The Problem</span>
                     <p className="leading-relaxed">
                       Google doesn&apos;t see specific landing pages on your website confirming you offer all key services across neighboring areas.
                     </p>
                   </div>
-                  <div className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-200/70">
-                    <span className="font-bold text-emerald-800 text-[10px] uppercase tracking-wide block mb-0.5">The Fix</span>
+                  <div className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-200/70">
+                    <span className="font-bold text-emerald-800 text-xs uppercase tracking-wide block mb-1">The Fix</span>
                     <p className="leading-relaxed text-slate-700">
                       We publish dedicated, high-converting service and neighborhood pages optimized for Google Maps matching.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center space-x-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 w-full justify-center">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="pt-3 border-t border-slate-100">
+                <span className="inline-flex items-center space-x-2 text-xs sm:text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 w-full justify-center">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
                   <span>Expected Impact: +30% Geographic Expansion</span>
                 </span>
               </div>
             </div>
 
             {/* Fix 2 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4 hover:border-amber-300 transition group">
-              <div className="space-y-3">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-5 hover:border-amber-300 transition group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md border border-amber-200">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg border border-amber-200">
                     Fix 02 • Authority &amp; Reviews
                   </span>
-                  <Star className="w-4 h-4 text-amber-500" />
+                  <Star className="w-5 h-5 text-amber-500" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition leading-snug">
+                <h4 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-amber-800 transition leading-snug">
                   Review Acceleration &amp; Service Keyword Mentions
                 </h4>
-                <div className="space-y-2 text-xs text-slate-600">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
-                    <span className="font-bold text-rose-700 text-[10px] uppercase tracking-wide block mb-0.5">The Problem</span>
+                <div className="space-y-2.5 text-sm text-slate-600">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/70">
+                    <span className="font-bold text-rose-700 text-xs uppercase tracking-wide block mb-1">The Problem</span>
                     <p className="leading-relaxed">
                       {topCompetitor1} has {Math.max(40, comp1Reviews - 80)} more reviews, and Google rewards profiles whose customer reviews mention specific services and towns.
                     </p>
                   </div>
-                  <div className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-200/70">
-                    <span className="font-bold text-amber-800 text-[10px] uppercase tracking-wide block mb-0.5">The Fix</span>
+                  <div className="bg-amber-50/50 p-3.5 rounded-xl border border-amber-200/70">
+                    <span className="font-bold text-amber-800 text-xs uppercase tracking-wide block mb-1">The Fix</span>
                     <p className="leading-relaxed text-slate-700">
                       We set up an automated review flow prompting satisfied customers to mention the exact service and area, building authority fast.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center space-x-1.5 text-xs font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 w-full justify-center">
-                  <Flame className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Expected Impact: Closes the Review Gap in 30–60 Days</span>
+              <div className="pt-3 border-t border-slate-100">
+                <span className="inline-flex items-center space-x-2 text-xs sm:text-sm font-bold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 w-full justify-center">
+                  <Flame className="w-4 h-4 text-amber-600" />
+                  <span>Expected Impact: Closes Review Gap in 30–60 Days</span>
                 </span>
               </div>
             </div>
 
             {/* Fix 3 */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4 hover:border-blue-300 transition group">
-              <div className="space-y-3">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-5 hover:border-blue-300 transition group">
+              <div className="space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md border border-blue-200">
+                  <span className="text-xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg border border-blue-200">
                     Fix 03 • Location Trust
                   </span>
-                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <MapPin className="w-5 h-5 text-blue-600" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-800 transition leading-snug">
+                <h4 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-800 transition leading-snug">
                   Fix Directory &amp; Map Consistency (NAP Alignment)
                 </h4>
-                <div className="space-y-2 text-xs text-slate-600">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
-                    <span className="font-bold text-rose-700 text-[10px] uppercase tracking-wide block mb-0.5">The Problem</span>
+                <div className="space-y-2.5 text-sm text-slate-600">
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/70">
+                    <span className="font-bold text-rose-700 text-xs uppercase tracking-wide block mb-1">The Problem</span>
                     <p className="leading-relaxed">
                       Conflicting phone numbers or missing listings on Apple Maps, Bing, and local directories weaken Google&apos;s trust in your location.
                     </p>
                   </div>
-                  <div className="bg-blue-50/50 p-2.5 rounded-xl border border-blue-200/70">
-                    <span className="font-bold text-blue-800 text-[10px] uppercase tracking-wide block mb-0.5">The Fix</span>
+                  <div className="bg-blue-50/50 p-3.5 rounded-xl border border-blue-200/70">
+                    <span className="font-bold text-blue-800 text-xs uppercase tracking-wide block mb-1">The Fix</span>
                     <p className="leading-relaxed text-slate-700">
                       We lock in 100% verified consistency across all major mapping networks and local directories.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="pt-2 border-t border-slate-100">
-                <span className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 w-full justify-center">
-                  <Target className="w-3.5 h-3.5 text-blue-600" />
+              <div className="pt-3 border-t border-slate-100">
+                <span className="inline-flex items-center space-x-2 text-xs sm:text-sm font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 w-full justify-center">
+                  <Target className="w-4 h-4 text-blue-600" />
                   <span>Expected Impact: Strengthens Local Pack Stability</span>
                 </span>
               </div>

@@ -11,9 +11,9 @@
  */
 
 export interface OmnichannelAuditInputs {
-  avgTicketValue: number;    // e.g. £250 (range £150 - £350+)
-  monthlyVisitors: number;   // e.g. 600 (range 400 - 800+)
-  closeRate: number;         // e.g. 20 (20% close rate)
+  avgTicketValue: number;    // e.g. £280 (range £150 - £450+)
+  monthlyVisitors: number;   // e.g. 180 (range 50 - 350+)
+  closeRate: number;         // e.g. 25 (25% close rate)
 
   // 5 Pillar Fix Toggles (false = leaking [default], true = fixed/repaired)
   websiteConversionFixed?: boolean;
@@ -75,9 +75,9 @@ export interface OmnichannelLeakageReport {
 }
 
 export const DEFAULT_OMNICHANNEL_INPUTS: Required<OmnichannelAuditInputs> = {
-  avgTicketValue: 250,
-  monthlyVisitors: 600,
-  closeRate: 20, // 20% default close rate
+  avgTicketValue: 280,
+  monthlyVisitors: 180,
+  closeRate: 25, // 25% default close rate
   websiteConversionFixed: false,
   speedToLeadFixed: false,
   onlineBookingFixed: false,
@@ -98,17 +98,17 @@ export function calculateOmnichannelLeakage(
   };
 
   const ticket = Math.max(50, inputs.avgTicketValue);
-  const visitors = Math.max(100, inputs.monthlyVisitors);
+  const visitors = Math.max(30, inputs.monthlyVisitors);
   const closeRatio = Math.max(0.05, Math.min(1.0, inputs.closeRate / 100));
 
   // ---------------------------------------------------------------------------
   // 1. Website Conversion & Mobile UX
   // Gaps: No sticky click-to-call header, slow mobile speed, missing trust/license badges.
-  // Loss: ~15% bounce rate loss (~1-3 jobs/mo).
+  // Loss: ~15% bounce rate loss (~1-2 jobs/mo).
   // ---------------------------------------------------------------------------
   const convLostJobs = inputs.websiteConversionFixed
     ? 0
-    : Math.max(1, Math.min(3, Math.round(visitors * 0.04 * 0.15 * closeRatio * 4)));
+    : Math.max(1, Math.min(2, Math.round(visitors * 0.006)));
   const convMonthlyLoss = convLostJobs * ticket;
 
   const websiteConversion: LeakagePillarCard = {
@@ -137,11 +137,11 @@ export function calculateOmnichannelLeakage(
   // ---------------------------------------------------------------------------
   // 2. Real-Time Communication & Speed-to-Lead
   // Gaps: No automated missed-call SMS text-back, no 24/7 AI web chat, no WhatsApp click-to-chat.
-  // Loss: 62% of unanswered calls go to rivals (~3-5 jobs/mo).
+  // Loss: 15% drop-off assumption, 12-18% missed calls, 20% text-back recovery (~1-2 jobs/mo).
   // ---------------------------------------------------------------------------
   const speedLostJobs = inputs.speedToLeadFixed
     ? 0
-    : Math.max(3, Math.min(5, Math.round(visitors * 0.07 * 0.18 * 0.62 * closeRatio * 4.8)));
+    : Math.max(1, Math.min(2, Math.round(visitors * 0.008)));
   const speedMonthlyLoss = speedLostJobs * ticket;
 
   const speedToLead: LeakagePillarCard = {
@@ -170,11 +170,11 @@ export function calculateOmnichannelLeakage(
   // ---------------------------------------------------------------------------
   // 3. Self-Service Booking Friction
   // Gaps: Phone-tag only scheduling; no 24/7 online booking calendar for after-hours visitors.
-  // Loss: ~10-15% lost bookings (~2 jobs/mo).
+  // Loss: ~10-15% lost bookings (~1-2 jobs/mo).
   // ---------------------------------------------------------------------------
   const bookingLostJobs = inputs.onlineBookingFixed
     ? 0
-    : Math.max(1, Math.min(3, Math.round(visitors * 0.08 * 0.12 * closeRatio * 1.8)));
+    : Math.max(1, Math.min(2, Math.round(visitors * 0.007)));
   const bookingMonthlyLoss = bookingLostJobs * ticket;
 
   const onlineBooking: LeakagePillarCard = {
@@ -202,13 +202,13 @@ export function calculateOmnichannelLeakage(
 
   // ---------------------------------------------------------------------------
   // 4. Reputation, Review Velocity & Review Responses
-  // Gaps: Low review velocity (<1/mo), unresponded 5-star & negative reviews, no multi-platform review feeds (Google, FB, Trustpilot).
-  // Loss: ~15% local pack CTR loss due to lack of fresh social proof (~2 jobs/mo).
+  // Gaps: Low review velocity (<1/mo), unresponded 5-star & negative reviews.
+  // Loss: Scaled conservative review leakage (£150–£400/mo).
   // ---------------------------------------------------------------------------
-  const repLostJobs = inputs.reputationFixed
+  const repLostJobs = inputs.reputationFixed ? 0 : 1;
+  const repMonthlyLoss = inputs.reputationFixed
     ? 0
-    : Math.max(1, Math.min(3, Math.round(visitors * 0.20 * 0.15 * closeRatio * 0.4)));
-  const repMonthlyLoss = repLostJobs * ticket;
+    : Math.min(400, Math.max(150, Math.round(ticket * 0.85)));
 
   const reputation: LeakagePillarCard = {
     id: 'reputation',
@@ -235,13 +235,13 @@ export function calculateOmnichannelLeakage(
 
   // ---------------------------------------------------------------------------
   // 5. Customer Retention & Referral Automation
-  // Gaps: No automated seasonal email/SMS check-ins, zero VIP re-booking offers, no loyalty referral system.
-  // Loss: 5-8% lost repeat/referral revenue (~1-2 jobs/mo).
+  // Gaps: No automated seasonal check-ins, zero VIP re-booking offers.
+  // Loss: Cap monthly churn value to realistic local business ticket norms (£250–£500/mo).
   // ---------------------------------------------------------------------------
-  const retentionLostJobs = inputs.retentionFixed
+  const retentionLostJobs = inputs.retentionFixed ? 0 : 1;
+  const retentionMonthlyLoss = inputs.retentionFixed
     ? 0
-    : Math.max(1, Math.min(2, Math.round(visitors * 0.015 * 0.85)));
-  const retentionMonthlyLoss = retentionLostJobs * ticket;
+    : Math.min(500, Math.max(250, Math.round(ticket * 0.95)));
 
   const retention: LeakagePillarCard = {
     id: 'retention',
