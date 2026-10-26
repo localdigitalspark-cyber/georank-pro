@@ -25,6 +25,9 @@ import { NewScanModal } from '../components/modals/NewScanModal.tsx';
 import { ActionPlanModal } from '../components/modals/ActionPlanModal.tsx';
 import { ShareReportModal } from '../components/reports/ShareReportModal.tsx';
 import { BrandingModal } from '../components/branding/BrandingModal.tsx';
+import { TrackingConfigModal, type TrackingConfigData } from '../components/tracking/TrackingConfigModal.tsx';
+import { WinLossAlertsModal } from '../components/tracking/WinLossAlertsModal.tsx';
+import type { RankingDelta, TrackingFrequency } from '../lib/types.ts';
 import { useBranding } from '../lib/context/BrandingContext.tsx';
 
 // Dedicated Views
@@ -160,6 +163,38 @@ export default function DashboardPage() {
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareScanId, setShareScanId] = useState<string>('');
   const [brandingModalOpen, setBrandingModalOpen] = useState<boolean>(false);
+
+  // Tracking & Win/Loss Volatility Alerts State
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState<boolean>(false);
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState<boolean>(false);
+  const [trackingTargetBusiness, setTrackingTargetBusiness] = useState<{
+    id: string;
+    name: string;
+    trackingConfig?: any;
+  } | null>(null);
+  const [activeBusinessDelta, setActiveBusinessDelta] = useState<RankingDelta | undefined>(() => ({
+    avgSerpDelta: 1.8,
+    inPackDelta: 12.0,
+    enteredThreePack: true,
+    droppedFromThreePack: false,
+    previousAvgSerp: 6.0,
+    currentAvgSerp: 4.2,
+    previousTop3Percentage: 16.0,
+    currentTop3Percentage: 28.0,
+    currentScanDate: 'Today, 2:15 PM',
+    netGridMovement: 'improved',
+    nodesImproved: 7,
+    nodesDropped: 1,
+    nodesUnchanged: 17,
+  }));
+  const [activeTrackingConfig, setActiveTrackingConfig] = useState<any>({
+    enabled: true,
+    frequency: 'weekly',
+    alertOnThreePackEnter: true,
+    alertOnRankDrop: true,
+    rankDropThreshold: 2.0,
+  });
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState<number>(0);
 
   // AI Audit State - initialized from keyword cache entry
   const [auditOutput, setAuditOutput] = useState<LocalSeoAuditOutput>(() => {
@@ -343,6 +378,22 @@ export default function DashboardPage() {
             setTargetDomain(targetBiz.website);
             setTargetWebsite(targetBiz.website);
           }
+          if (targetBiz.latestDelta) {
+            setActiveBusinessDelta(targetBiz.latestDelta);
+          }
+          if (targetBiz.trackingConfig) {
+            setActiveTrackingConfig(targetBiz.trackingConfig);
+          }
+
+          // Fetch unread alerts count
+          fetch('/api/tracking/alerts')
+            .then((r) => r.json())
+            .then((alertsData) => {
+              if (isMounted && alertsData.success && typeof alertsData.unreadCount === 'number') {
+                setUnreadAlertsCount(alertsData.unreadCount);
+              }
+            })
+            .catch(() => {});
 
           // Check if there is an existing persisted scan for this business
           fetch(`/api/scans?businessId=${encodeURIComponent(targetBiz.id)}`)
@@ -904,6 +955,15 @@ export default function DashboardPage() {
     setActiveNav('businesses');
     setBusinessTab('keywords');
 
+    if (item.latestDelta) {
+      setActiveBusinessDelta(item.latestDelta);
+    } else {
+      setActiveBusinessDelta(undefined);
+    }
+    if (item.trackingConfig) {
+      setActiveTrackingConfig(item.trackingConfig);
+    }
+
     const freshCache = buildInitialKeywordScanCache({
       businessName: item.name,
       center: { lat: item.lat, lng: item.lng },
@@ -1102,6 +1162,18 @@ export default function DashboardPage() {
             totalKeywords={Object.keys(keywordCache).length}
             isScanning={isScanning}
             scanSummary={scanSummary}
+            trackingFrequency={activeTrackingConfig?.frequency}
+            latestDelta={activeBusinessDelta}
+            unreadAlertsCount={unreadAlertsCount}
+            onOpenTracking={() => {
+              setTrackingTargetBusiness({
+                id: activeBusinessId || 'b1',
+                name: businessName,
+                trackingConfig: activeTrackingConfig,
+              });
+              setIsTrackingModalOpen(true);
+            }}
+            onOpenAlerts={() => setIsAlertsModalOpen(true)}
           />
         )}
 
@@ -1188,6 +1260,7 @@ export default function DashboardPage() {
                     onSelectKeyword={handleSelectKeyword}
                     onAddKeyword={handleAddKeyword}
                     onDeleteKeyword={handleDeleteKeyword}
+                    latestDelta={activeBusinessDelta}
                   />
                 )}
                 {businessTab === 'todo' && (
@@ -1285,6 +1358,14 @@ export default function DashboardPage() {
                 onOpenAddBusinessModal={() => setIsWizardOpen(true)}
                 currentBusinessName={businessName}
                 onLocationResolved={handleLocationResolved}
+                onOpenTrackingModal={(biz) => {
+                  setTrackingTargetBusiness({
+                    id: biz.id,
+                    name: biz.name,
+                    trackingConfig: biz.trackingConfig,
+                  });
+                  setIsTrackingModalOpen(true);
+                }}
                 onBusinessDeleted={(deletedId, name) => {
                   setGlobalToast(`"${name}" and all associated scans were deleted successfully.`);
                   setTimeout(() => setGlobalToast(null), 5000);
@@ -1608,6 +1689,42 @@ export default function DashboardPage() {
         <BrandingModal
           isOpen={brandingModalOpen}
           onClose={() => setBrandingModalOpen(false)}
+        />
+
+        {/* Tracking Configuration Modal */}
+        {trackingTargetBusiness && (
+          <TrackingConfigModal
+            isOpen={isTrackingModalOpen}
+            onClose={() => setIsTrackingModalOpen(false)}
+            businessId={trackingTargetBusiness.id}
+            businessName={trackingTargetBusiness.name}
+            initialConfig={trackingTargetBusiness.trackingConfig}
+            onConfigSaved={(saved) => {
+              if (trackingTargetBusiness.id === activeBusinessId) {
+                setActiveTrackingConfig(saved);
+              }
+            }}
+            onTrackingRunComplete={() => {
+              // Reload alerts and active business details
+              fetch('/api/tracking/alerts')
+                .then((r) => r.json())
+                .then((d) => {
+                  if (d.success && typeof d.unreadCount === 'number') {
+                    setUnreadAlertsCount(d.unreadCount);
+                  }
+                })
+                .catch(() => {});
+            }}
+          />
+        )}
+
+        {/* Win / Loss Volatility Alerts Modal */}
+        <WinLossAlertsModal
+          isOpen={isAlertsModalOpen}
+          onClose={() => setIsAlertsModalOpen(false)}
+          businessId={activeBusinessId}
+          businessName={businessName}
+          onAlertsCountChange={(count) => setUnreadAlertsCount(count)}
         />
 
         {/* Footer */}

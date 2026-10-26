@@ -10,6 +10,29 @@
 import fs from 'fs';
 import path from 'path';
 import { resolveStorageDir, atomicWriteJsonSync, deleteScansForBusiness } from './scan-store.ts';
+import type { TrackingFrequency, KeywordTrackingConfig, RankingDelta } from '../types.ts';
+
+export type { TrackingFrequency, KeywordTrackingConfig, RankingDelta };
+
+export function calculateNextTrackDue(frequency: TrackingFrequency, fromDate = new Date()): string | undefined {
+  if (frequency === 'off') return undefined;
+  const d = new Date(fromDate.getTime());
+  switch (frequency) {
+    case 'daily':
+      d.setHours(d.getHours() + 24);
+      break;
+    case 'weekly':
+      d.setDate(d.getDate() + 7);
+      break;
+    case 'bi-weekly':
+      d.setDate(d.getDate() + 14);
+      break;
+    case 'monthly':
+      d.setDate(d.getDate() + 30);
+      break;
+  }
+  return d.toISOString();
+}
 
 export interface ManagedBusiness {
   id: string;
@@ -40,6 +63,12 @@ export interface ManagedBusiness {
   notes?: string;
   source?: 'gbp' | 'website' | 'manual';
   suggestedKeywords?: string[];
+  trackingConfig?: KeywordTrackingConfig;
+  keywordsTracking?: Record<string, KeywordTrackingConfig>;
+  latestDelta?: RankingDelta;
+  rankingDeltas?: Record<string, RankingDelta>;
+  webhookUrl?: string;
+  alertEmail?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +96,32 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     lastScanDate: 'Today, 2:15 PM',
     keyword: 'Emergency Plumber',
     source: 'manual',
+    trackingConfig: {
+      enabled: true,
+      frequency: 'weekly',
+      lastTrackedAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
+      nextTrackDue: new Date(Date.now() + 3600000 * 24 * 5).toISOString(),
+      alertEmail: 'owner@austinpremierplumbing.com',
+      alertOnThreePackEnter: true,
+      alertOnRankDrop: true,
+      rankDropThreshold: 2.0,
+    },
+    latestDelta: {
+      avgSerpDelta: 1.8,
+      inPackDelta: 12.0,
+      enteredThreePack: true,
+      droppedFromThreePack: false,
+      previousAvgSerp: 6.0,
+      currentAvgSerp: 4.2,
+      previousTop3Percentage: 16.0,
+      currentTop3Percentage: 28.0,
+      previousScanDate: 'Oct 19, 2026',
+      currentScanDate: 'Today, 2:15 PM',
+      netGridMovement: 'improved',
+      nodesImproved: 7,
+      nodesDropped: 1,
+      nodesUnchanged: 17,
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -88,6 +143,32 @@ const DEFAULT_SEEDED_BUSINESSES: ManagedBusiness[] = [
     lastScanDate: 'Yesterday',
     keyword: 'Hair Colour Salon',
     source: 'manual',
+    trackingConfig: {
+      enabled: true,
+      frequency: 'bi-weekly',
+      lastTrackedAt: new Date(Date.now() - 3600000 * 24 * 3).toISOString(),
+      nextTrackDue: new Date(Date.now() + 3600000 * 24 * 11).toISOString(),
+      alertEmail: 'contact@sunrisehairstudio.com',
+      alertOnThreePackEnter: true,
+      alertOnRankDrop: true,
+      rankDropThreshold: 2.0,
+    },
+    latestDelta: {
+      avgSerpDelta: -1.6,
+      inPackDelta: -8.0,
+      enteredThreePack: false,
+      droppedFromThreePack: true,
+      previousAvgSerp: 13.2,
+      currentAvgSerp: 14.8,
+      previousTop3Percentage: 12.0,
+      currentTop3Percentage: 4.0,
+      previousScanDate: 'Oct 12, 2026',
+      currentScanDate: 'Yesterday',
+      netGridMovement: 'dropped',
+      nodesImproved: 2,
+      nodesDropped: 6,
+      nodesUnchanged: 17,
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -151,12 +232,17 @@ function initBusinessStorage() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           parsed.forEach((b) => {
             if (b?.id && b?.name) {
+              const defaultMatch = DEFAULT_SEEDED_BUSINESSES.find((d) => d.id === b.id);
               inMemoryBusinesses.set(b.id, {
+                ...defaultMatch,
                 ...b,
+                trackingConfig: b.trackingConfig || defaultMatch?.trackingConfig,
+                latestDelta: b.latestDelta || defaultMatch?.latestDelta,
                 reviewCount: typeof b.reviewCount === 'number' ? b.reviewCount : (b.reviews || 0),
               });
             }
           });
+          persistBusinessesToDisk();
           return;
         }
       }
@@ -242,6 +328,12 @@ export function saveBusiness(data: {
   notes?: string;
   source?: 'gbp' | 'website' | 'manual';
   suggestedKeywords?: string[];
+  trackingConfig?: KeywordTrackingConfig;
+  keywordsTracking?: Record<string, KeywordTrackingConfig>;
+  latestDelta?: RankingDelta;
+  rankingDeltas?: Record<string, RankingDelta>;
+  webhookUrl?: string;
+  alertEmail?: string;
 }): ManagedBusiness {
   const id = data.id || generateBusinessId();
   const now = new Date().toISOString();
@@ -284,6 +376,12 @@ export function saveBusiness(data: {
     notes: data.notes || existing?.notes,
     source: data.source || existing?.source || 'manual',
     suggestedKeywords: data.suggestedKeywords || existing?.suggestedKeywords || [],
+    trackingConfig: data.trackingConfig || existing?.trackingConfig,
+    keywordsTracking: data.keywordsTracking || existing?.keywordsTracking,
+    latestDelta: data.latestDelta || existing?.latestDelta,
+    rankingDeltas: data.rankingDeltas || existing?.rankingDeltas,
+    webhookUrl: data.webhookUrl || existing?.webhookUrl,
+    alertEmail: data.alertEmail || existing?.alertEmail,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
   };
@@ -309,6 +407,10 @@ export function updateBusiness(id: string, updates: Partial<ManagedBusiness>): M
     ...updates,
     reviews: reviewsVal,
     reviewCount: reviewsVal,
+    trackingConfig: updates.trackingConfig !== undefined ? updates.trackingConfig : existing.trackingConfig,
+    keywordsTracking: updates.keywordsTracking !== undefined ? updates.keywordsTracking : existing.keywordsTracking,
+    latestDelta: updates.latestDelta !== undefined ? updates.latestDelta : existing.latestDelta,
+    rankingDeltas: updates.rankingDeltas !== undefined ? updates.rankingDeltas : existing.rankingDeltas,
     id,
     updatedAt: new Date().toISOString(),
   };

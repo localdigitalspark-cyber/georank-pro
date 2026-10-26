@@ -8,6 +8,8 @@
 
 import React, { useState } from 'react';
 import type { GridScanSummary } from '../../lib/serp/adapter.ts';
+import type { RankingDelta, TrackingFrequency } from '../../lib/types.ts';
+import { formatDeltaBadge } from '../../lib/tracking/ranking-delta.ts';
 import { useActiveScanMetrics } from '../../lib/hooks/useActiveScanMetrics.ts';
 import {
   Building2,
@@ -28,6 +30,8 @@ import {
   Trash2,
   AlertTriangle,
   ChevronDown,
+  Clock,
+  Bell,
 } from 'lucide-react';
 
 export type BusinessSubTab =
@@ -53,6 +57,11 @@ export interface BusinessHeaderProps {
   totalKeywords?: number;
   isScanning?: boolean;
   scanSummary?: GridScanSummary | null;
+  trackingFrequency?: TrackingFrequency;
+  latestDelta?: RankingDelta;
+  unreadAlertsCount?: number;
+  onOpenTracking?: () => void;
+  onOpenAlerts?: () => void;
 }
 
 export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
@@ -68,6 +77,11 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
   totalKeywords = 1,
   isScanning = false,
   scanSummary,
+  trackingFrequency,
+  latestDelta,
+  unreadAlertsCount = 0,
+  onOpenTracking,
+  onOpenAlerts,
 }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const metrics = useActiveScanMetrics(scanSummary || null, category, businessName);
@@ -131,12 +145,65 @@ export const BusinessHeader: React.FC<BusinessHeaderProps> = ({
               <span className="font-semibold text-slate-700">
                 Top 3: <strong className="text-emerald-600">{metrics.formattedTop3}</strong>
               </span>
+              {latestDelta && (() => {
+                const deltaBadge = formatDeltaBadge(latestDelta);
+                return (
+                  <>
+                    <span>•</span>
+                    <span
+                      data-testid="header-delta-badge"
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${deltaBadge.colorClass}`}
+                      title={deltaBadge.text}
+                    >
+                      {deltaBadge.text}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
 
         {/* Action CTAs */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Win/Loss Volatility Alerts Button */}
+          {onOpenAlerts && (
+            <button
+              onClick={onOpenAlerts}
+              data-testid="header-alerts-btn"
+              className="relative inline-flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+              title="View Win/Loss SERP volatility alerts"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-600" />
+              <span className="hidden sm:inline">Alerts</span>
+              {unreadAlertsCount !== undefined && unreadAlertsCount > 0 && (
+                <span
+                  data-testid="unread-alerts-badge"
+                  className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-rose-500 text-white animate-pulse"
+                >
+                  {unreadAlertsCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Tracking Frequency Button */}
+          {onOpenTracking && (
+            <button
+              onClick={onOpenTracking}
+              data-testid="header-tracking-btn"
+              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+              title="Configure recurring rank tracking"
+            >
+              <Clock className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="capitalize">
+                {trackingFrequency && trackingFrequency !== 'off'
+                  ? `${trackingFrequency}`
+                  : 'Track'}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => {
               console.log('Client Report clicked! Current active business:', businessName);

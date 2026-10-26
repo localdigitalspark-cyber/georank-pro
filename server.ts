@@ -32,8 +32,20 @@ import {
   saveBusiness,
   updateBusiness,
   deleteBusiness,
+  calculateNextTrackDue,
   type ManagedBusiness,
 } from './src/lib/storage/business-store.ts';
+import {
+  startRankTrackerScheduler,
+  runPendingTrackingJobs,
+  getSchedulerStatus,
+  executeScheduledScanForBusiness,
+} from './src/server/scheduler/rank-tracker.ts';
+import {
+  listAlerts,
+  markAlertRead,
+  markAllAlertsRead,
+} from './src/lib/storage/alert-store.ts';
 import { scrapeWebsiteForBusiness } from './src/lib/importers/website-importer.ts';
 import { searchGbpCandidates, fetchGbpBusinessDetails } from './src/lib/importers/gbp-importer.ts';
 import { resolveBusiness } from './src/lib/places/places-resolver.ts';
@@ -607,6 +619,141 @@ app.delete('/api/businesses/:id', (req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err?.message || 'Failed deleting business' });
+  }
+});
+
+/**
+ * Update business properties (general & tracking config)
+ */
+app.patch('/api/businesses/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updated = updateBusiness(id, req.body || {});
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+    res.json({ success: true, business: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed updating business' });
+  }
+});
+
+/**
+ * Configure automated rank tracking for a business and keyword
+ */
+app.post('/api/businesses/:id/tracking', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const business = getBusiness(id);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'Business not found' });
+    }
+
+    const {
+      enabled,
+      frequency = 'weekly',
+      alertEmail,
+      webhookUrl,
+      alertOnThreePackEnter,
+      alertOnRankDrop,
+      rankDropThreshold,
+      keyword,
+    } = req.body || {};
+
+    const nextTrackDue = enabled ? calculateNextTrackDue(frequency) : undefined;
+
+    const newConfig = {
+      enabled: Boolean(enabled),
+      frequency,
+      lastTrackedAt: business.trackingConfig?.lastTrackedAt,
+      nextTrackDue,
+      alertEmail: alertEmail !== undefined ? alertEmail : business.trackingConfig?.alertEmail,
+      webhookUrl: webhookUrl !== undefined ? webhookUrl : business.trackingConfig?.webhookUrl,
+      alertOnThreePackEnter: alertOnThreePackEnter !== undefined ? Boolean(alertOnThreePackEnter) : (business.trackingConfig?.alertOnThreePackEnter ?? true),
+      alertOnRankDrop: alertOnRankDrop !== undefined ? Boolean(alertOnRankDrop) : (business.trackingConfig?.alertOnRankDrop ?? true),
+      rankDropThreshold: rankDropThreshold !== undefined ? Number(rankDropThreshold) : (business.trackingConfig?.rankDropThreshold ?? 2.0),
+    };
+
+    const updates: Partial<ManagedBusiness> = {
+      trackingConfig: newConfig,
+    };
+
+    if (webhookUrl !== undefined) updates.webhookUrl = webhookUrl;
+    if (alertEmail !== undefined) updates.alertEmail = alertEmail;
+
+    if (keyword) {
+      updates.keywordsTracking = {
+        ...(business.keywordsTracking || {}),
+        [keyword]: newConfig,
+      };
+    }
+
+    const updated = updateBusiness(id, updates);
+    res.json({ success: true, business: updated, trackingConfig: newConfig });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed updating tracking configuration' });
+  }
+});
+
+/**
+ * Automated Rank Tracker Scheduler Status API
+ */
+app.get('/api/tracking/status', (_req: Request, res: Response) => {
+  try {
+    const status = getSchedulerStatus();
+    res.json({ success: true, status });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed retrieving tracking scheduler status' });
+  }
+});
+
+/**
+ * Trigger immediate execution of scheduled tracking checks
+ */
+app.post('/api/tracking/run-now', async (req: Request, res: Response) => {
+  try {
+    const { businessId, forceAll = false } = req.body || {};
+    if (businessId) {
+      const result = await executeScheduledScanForBusiness(businessId);
+      return res.json({ success: true, result });
+    }
+    const batchResult = await runPendingTrackingJobs(Boolean(forceAll));
+    res.json({ success: true, ...batchResult });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed executing tracking jobs' });
+  }
+});
+
+/**
+ * Win/Loss Alerts API
+ */
+app.get('/api/tracking/alerts', (req: Request, res: Response) => {
+  try {
+    const businessId = req.query.businessId as string | undefined;
+    const alerts = listAlerts(businessId);
+    const unreadCount = alerts.filter((a) => !a.read).length;
+    res.json({ success: true, count: alerts.length, unreadCount, alerts });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed retrieving alerts' });
+  }
+});
+
+app.post('/api/tracking/alerts/:id/read', (req: Request, res: Response) => {
+  try {
+    const ok = markAlertRead(req.params.id);
+    res.json({ success: ok });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed marking alert read' });
+  }
+});
+
+app.post('/api/tracking/alerts/read-all', (req: Request, res: Response) => {
+  try {
+    const businessId = req.body?.businessId as string | undefined;
+    const markedCount = markAllAlertsRead(businessId);
+    res.json({ success: true, markedCount });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err?.message || 'Failed marking all alerts read' });
   }
 });
 
@@ -1368,6 +1515,12 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`GeoRank Pro engine server running at http://0.0.0.0:${PORT}`);
+    // Start automated background rank tracking scheduler
+    try {
+      startRankTrackerScheduler();
+    } catch (err) {
+      console.warn('RankTrackerScheduler startup error:', err);
+    }
   });
 }
 

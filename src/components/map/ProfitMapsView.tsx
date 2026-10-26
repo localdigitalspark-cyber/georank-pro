@@ -41,6 +41,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { GridScanSummary, NodeScanOutput } from '../../lib/serp/adapter.ts';
+import type { RankingDelta } from '../../lib/types.ts';
+import { formatDeltaBadge } from '../../lib/tracking/ranking-delta.ts';
 import { KeywordDiscoveryModal } from '../keywords/KeywordDiscoveryModal.tsx';
 
 export interface KeywordChip {
@@ -48,6 +50,12 @@ export interface KeywordChip {
   keyword: string;
   top3Percentage: number;
   averageRank: number;
+  delta?: {
+    avgSerpDelta: number;
+    shortText: string;
+    isPositive: boolean;
+    isNegative: boolean;
+  };
 }
 
 export interface ProfitMapsViewProps {
@@ -69,6 +77,7 @@ export interface ProfitMapsViewProps {
   onSelectKeyword?: (keyword: string) => void;
   onAddKeyword?: (newKeyword: string) => void;
   onDeleteKeyword?: (keyword: string) => void;
+  latestDelta?: RankingDelta;
 }
 
 // Controller to smoothly pan & fit map bounds
@@ -152,9 +161,11 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
   onSelectKeyword,
   onAddKeyword,
   onDeleteKeyword,
+  latestDelta,
 }) => {
   // Top Keyword Selector Bar State
   const activeKeyword = propActiveKeyword || scanSummary?.keyword || 'Emergency Plumber';
+  const activeDeltaBadge = latestDelta ? formatDeltaBadge(latestDelta) : null;
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -330,7 +341,21 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                 <Tag className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="truncate">{currentKeywordObj.keyword}</span>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
+                {activeDeltaBadge && activeDeltaBadge.shortText !== '0.0' && (
+                  <span
+                    data-testid="active-keyword-delta-badge"
+                    className={`text-[9px] sm:text-[10px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md font-bold ${
+                      activeDeltaBadge.isPositive
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : activeDeltaBadge.isNegative
+                        ? 'bg-rose-500/20 text-rose-300'
+                        : 'bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    {activeDeltaBadge.shortText}
+                  </span>
+                )}
                 <span className="text-[10px] sm:text-[11px] font-mono px-1 sm:px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300">
                   {currentKeywordObj.top3Percentage}%
                 </span>
@@ -384,6 +409,19 @@ export const ProfitMapsView: React.FC<ProfitMapsViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
+                          {k.delta && (
+                            <span
+                              className={`text-[9px] font-mono font-bold px-1 py-0.5 rounded-md ${
+                                k.delta.isPositive
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : k.delta.isNegative
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {k.delta.shortText}
+                            </span>
+                          )}
                           <span
                             className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md ${
                               isSelected

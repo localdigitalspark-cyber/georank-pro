@@ -28,8 +28,12 @@ import {
   Trash2,
   AlertTriangle,
   X,
+  Clock,
+  Bell,
 } from 'lucide-react';
 import { inferKeywordFromTrade, type ResolvedLocation } from '../search/BusinessSearchInput.tsx';
+import type { RankingDelta, TrackingFrequency } from '../../lib/types.ts';
+import { formatDeltaBadge } from '../../lib/tracking/ranking-delta.ts';
 
 export interface BusinessCardItem {
   id: string;
@@ -44,6 +48,17 @@ export interface BusinessCardItem {
   lat: number;
   lng: number;
   keyword: string;
+  trackingConfig?: {
+    enabled: boolean;
+    frequency: TrackingFrequency;
+    alertEmail?: string;
+    webhookUrl?: string;
+    alertOnThreePackEnter?: boolean;
+    alertOnRankDrop?: boolean;
+    rankDropThreshold?: number;
+    nextTrackDue?: string;
+  };
+  latestDelta?: RankingDelta;
 }
 
 export interface BusinessesListViewProps {
@@ -52,6 +67,7 @@ export interface BusinessesListViewProps {
   currentBusinessName?: string;
   onLocationResolved?: (location: ResolvedLocation) => void;
   onBusinessDeleted?: (id: string, name: string) => void;
+  onOpenTrackingModal?: (business: BusinessCardItem) => void;
 }
 
 const KNOWN_CITIES: Record<string, { lat: number; lng: number; city: string }> = {
@@ -74,6 +90,7 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
   currentBusinessName,
   onLocationResolved,
   onBusinessDeleted,
+  onOpenTrackingModal,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isResolving, setIsResolving] = useState(false);
@@ -168,6 +185,28 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
       lat: 30.2672,
       lng: -97.7431,
       keyword: 'Emergency Plumber',
+      trackingConfig: {
+        enabled: true,
+        frequency: 'weekly',
+        alertOnThreePackEnter: true,
+        alertOnRankDrop: true,
+        rankDropThreshold: 2.0,
+      },
+      latestDelta: {
+        avgSerpDelta: 1.8,
+        inPackDelta: 12.0,
+        enteredThreePack: true,
+        droppedFromThreePack: false,
+        previousAvgSerp: 6.0,
+        currentAvgSerp: 4.2,
+        previousTop3Percentage: 16.0,
+        currentTop3Percentage: 28.0,
+        currentScanDate: 'Today, 2:15 PM',
+        netGridMovement: 'improved',
+        nodesImproved: 7,
+        nodesDropped: 1,
+        nodesUnchanged: 17,
+      },
     },
     {
       id: 'b2',
@@ -182,6 +221,28 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
       lat: 30.2505,
       lng: -97.7710,
       keyword: 'Hair Colour Salon',
+      trackingConfig: {
+        enabled: true,
+        frequency: 'bi-weekly',
+        alertOnThreePackEnter: true,
+        alertOnRankDrop: true,
+        rankDropThreshold: 2.0,
+      },
+      latestDelta: {
+        avgSerpDelta: -1.6,
+        inPackDelta: -8.0,
+        enteredThreePack: false,
+        droppedFromThreePack: true,
+        previousAvgSerp: 13.2,
+        currentAvgSerp: 14.8,
+        previousTop3Percentage: 12.0,
+        currentTop3Percentage: 4.0,
+        currentScanDate: 'Yesterday',
+        netGridMovement: 'dropped',
+        nodesImproved: 2,
+        nodesDropped: 8,
+        nodesUnchanged: 15,
+      },
     },
     {
       id: 'b3',
@@ -413,18 +474,54 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Top 3 Presence Badge */}
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
-                        item.top3Percentage >= 30
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : item.top3Percentage >= 10
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
-                      }`}
-                    >
-                      {item.top3Percentage}% in top 3
-                    </span>
+                    {/* Top Right Badges: Delta Movement, 3-Pack Presence, and Tracking Pill */}
+                    {(() => {
+                      const deltaBadge = formatDeltaBadge(item.latestDelta);
+                      const isTracked = item.trackingConfig?.enabled && item.trackingConfig.frequency !== 'off';
+                      const trackFreq = item.trackingConfig?.frequency;
+
+                      return (
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Delta Movement Badge */}
+                            <span
+                              data-testid={`delta-badge-${item.id}`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${deltaBadge.colorClass}`}
+                              title={`Ranking movement: ${deltaBadge.text}`}
+                            >
+                              {deltaBadge.text}
+                            </span>
+
+                            {/* Top 3 Presence Badge */}
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                                item.top3Percentage >= 30
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : item.top3Percentage >= 10
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              }`}
+                            >
+                              {item.top3Percentage}% in top 3
+                            </span>
+                          </div>
+
+                          {/* Tracking status badge */}
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-bold tracking-tight uppercase border flex items-center gap-1 ${
+                                isTracked
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                              }`}
+                            >
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>{isTracked ? `${trackFreq} tracking` : 'Tracking off'}</span>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Address & Reviews */}
@@ -483,6 +580,22 @@ export const BusinessesListView: React.FC<BusinessesListViewProps> = ({
                   </span>
 
                   <div className="flex items-center space-x-2">
+                    {onOpenTrackingModal && (
+                      <button
+                        type="button"
+                        data-testid={`business-tracking-btn-${item.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenTrackingModal(item);
+                        }}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 rounded-lg transition cursor-pointer"
+                        title="Configure recurring rank tracking & alerts"
+                      >
+                        <Clock className="w-3 h-3 text-slate-500" />
+                        <span>Tracking</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={(e) => {
